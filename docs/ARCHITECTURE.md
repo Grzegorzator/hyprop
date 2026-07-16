@@ -280,10 +280,10 @@ Po każdym etapie: opis algorytmu + równania + źródła → kod → testy → 
 
 | # | Decyzja | Opcje (zalety/wady w opisie etapu) | Etap |
 |---|---|---|---|
-| D1 | Właściwości N2O | ESDU 91022 (masz, szybkie) vs CoolProp (pełny EOS, wolniejsze) vs obie z przełącznikiem | E1/E5 |
-| D2 | Model zbiornika N2O | równowagowy adiabatyczny (HRAP) vs nierównowagowy Zilliac–Karabeyoglu vs Twój bilans energii z 06_hybrid_solver | E5 |
-| D3 | Wtryskiwacz dwufazowy | SPI vs NHNE (Dyer) vs HEM — który domyślny | E5 |
-| D4 | Strumień masowy w regresji | G_ox (klasyczne a,n z literatury) vs G_total (fizycznie pełniejszy, inne a,n) | E4 |
+| D1 | Właściwości N2O | **ROZSTRZYGNIĘTE (2026-07-16): obie z przełącznikiem — ESDU w pętli solvera, CoolProp dla HEM/NHNE i walidacji** | E5 ✓ |
+| D2 | Model zbiornika N2O | **ROZSTRZYGNIĘTE (2026-07-16): równowagowy adiabatyczny (HRAP); Z–K jako przyszłe rozszerzenie za interfejsem TankModel** | E5 ✓ |
+| D3 | Wtryskiwacz dwufazowy | **ROZSTRZYGNIĘTE (2026-07-16): SPI domyślny (zgodność z HRAP i kalibracjami Cd); NHNE i HEM zaimplementowane jako opcje** | E5 ✓ |
+| D4 | Strumień masowy w regresji | **ROZSTRZYGNIĘTE (2026-07-16): G_ox domyślnie (spójne z bazą HRAP); G_total dostępne przełącznikiem flux_basis** | E4 ✓ |
 | D5 | Solver Pc w kroku czasowym | iteracja punktu stałego (HRAP, masz w 06) vs Brent na bilansie masy (pewniejsza zbieżność) | E6 |
 | D6 | Przepływ w dyszy (CEA) | **ROZSTRZYGNIĘTE (2026-07-16): shifting equilibrium domyślnie; frozen zawsze liczone obok jako dolna granica; Bray opcjonalnie później** | E2 ✓ |
 | D7 | Faza gazowa blowdown | politropa par N2O (HRAP) vs real-gas CoolProp | E5 |
