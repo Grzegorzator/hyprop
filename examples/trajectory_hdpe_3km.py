@@ -14,7 +14,7 @@ import hyprop.api as api
 from hyprop.core.constants import G0
 from hyprop.physics import atmosphere
 
-M_DRY, D_REF, CD = 9.0, 0.10, 0.55
+M_DRY, D_REF, CD = 7.0, 0.10, 0.55   # m_dry: bottom-up estimate 6.25 kg + margin
 A_REF = np.pi * (D_REF / 2) ** 2
 
 result = api.run(api.load_config("examples/hdpe_05kN_3km_sized.yaml"))
