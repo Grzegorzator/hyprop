@@ -8,7 +8,7 @@ through HRAP-like transient simulation and Representative Operating Points
 
 Full design & development plan: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Status: stage E10 of 12 complete
+## Status: stage E11 of 12 complete
 
 | Stage | Scope | Status |
 |---|---|---|
@@ -23,10 +23,10 @@ Full design & development plan: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | E8 | Inverse sizing (`api.size`), ISA atmosphere, nozzle sizing on ROP (altitude-adapted eps), chamber L*, 1-DOF trajectory check | done |
 | E9 | Batch (grid/LHS, CEA-table cache), sensitivity (OAT default, Morris/Sobol via SALib), Monte Carlo uncertainty, port Re/Ma regime flags | done |
 | E10 | Exports (CSV/XLSX/JSON + config YAML), NASA-style LaTeX report (auto-PDF when pdflatex present), user database (YAML: engines/materials/injectors/tests) | done |
-| E11 | Optimization (scipy, NSGA-II via pymoo) on ROP objectives | next |
-| E12 | GUI (PySide6) + final docs | planned |
+| E11 | Optimization: differential evolution (scipy) + NSGA-II (pymoo, optional) over config paths, objectives/constraints on ROP metrics with penalty method | done |
+| E12 | GUI (PySide6) + final docs | next |
 
-Tests: **114 passing** (`pytest`). Physical model decisions log: D1-D10 in
+Tests: **117 passing** (`pytest`). Physical model decisions log: D1-D10 in
 `docs/ARCHITECTURE.md` par. 8. Resolved: D1 (N2O props: ESDU 91022 in the
 solver loop + CoolProp for injector thermodynamics and cross-validation),
 D2 (tank: thermodynamic-equilibrium adiabatic blowdown, HRAP-compatible),
@@ -116,7 +116,7 @@ hyprop/oppoints/   Representative Operating Points hub: time/thrust/mdot/
                    Pc/heat-flux-proxy/custom weighted averages, peak &
                    percentile points, phase statistics, recommendations
 hyprop/api.py      public API: load/save config, run (size/batch: E8/E9)
-tests/             pytest suite (114 tests)
+tests/             pytest suite (117 tests)
 docs/              architecture & model documentation
 ```
 
