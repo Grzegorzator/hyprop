@@ -1,0 +1,17 @@
+# Liquid oxygen (LOX)
+schema: oxidizer/1
+name: lox
+display_name: "Liquid oxygen (LOX)"
+formula: {O: 2}
+molar_mass_kg_mol: 0.031999     # NIST
+critical_temperature_k: 154.58  # NIST WebBook
+critical_pressure_pa: 5.043e6   # NIST WebBook
+phase_at_storage: "cryogenic liquid (pressure-fed or pump-fed)"
+property_backends:
+  - coolprop
+reference_density:
+  value: 1141.0                 # [kg/m^3] saturated liquid at 90.19 K (NBP)
+  source: "NIST WebBook; verify vs CoolProp at E5"
+  verify: false
+notes: >
+  Requires pressure-fed tank model (not self-pressurizing at storage T).

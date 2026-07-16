@@ -1,0 +1,20 @@
+# Nitrous oxide (N2O) - self-pressurizing oxidizer
+schema: oxidizer/1
+name: n2o
+display_name: "Nitrous oxide (N2O)"
+formula: {N: 2, O: 1}
+molar_mass_kg_mol: 0.044013     # CoolProp / NIST
+critical_temperature_k: 309.52  # NIST WebBook
+critical_pressure_pa: 7.245e6   # NIST WebBook
+phase_at_storage: "saturated liquid+vapor (self-pressurizing)"
+property_backends:              # decision D1 (E5): which is default
+  - esdu_91022                  # correlations already used in 06_hybrid_solver.py
+  - coolprop                    # full Helmholtz EOS
+reference_density:
+  value: 786.6                  # [kg/m^3] saturated liquid at 293.15 K
+  source: "ESDU 91022 correlation; verify vs CoolProp at E5"
+  verify: true
+notes: >
+  Blowdown behaviour dominated by saturation curve; tank model choices are
+  decision D2 (equilibrium HRAP vs Zilliac-Karabeyoglu vs user's energy
+  balance). Vapor-phase EOS choice is decision D7.

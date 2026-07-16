@@ -1,0 +1,20 @@
+# High-test peroxide (HTP) - concentrated hydrogen peroxide solution
+schema: oxidizer/1
+name: htp
+display_name: "High-test peroxide (H2O2 aqueous)"
+formula: {H: 2, O: 2}            # of the pure peroxide component
+molar_mass_kg_mol: 0.034015      # H2O2 (NIST); mixture M depends on concentration
+critical_temperature_k: null     # decomposes before critical point at usable conc.
+critical_pressure_pa: null
+phase_at_storage: "liquid solution (concentration parameter)"
+parameters:
+  concentration_default: 0.90    # mass fraction H2O2 [-]
+property_backends:
+  - correlation                  # density/viscosity vs concentration & T (E5)
+reference_density:
+  value: 1390.0                  # [kg/m^3] ~90% w/w at 293 K
+  source: "Ventura & Garboden (2005) HTP survey; verify at E5"
+  verify: true
+notes: >
+  Usually used with catalyst bed (monopropellant-preheated hybrid).
+  Requires decomposition model extension in later stages.

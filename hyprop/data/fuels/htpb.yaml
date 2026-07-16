@@ -1,0 +1,26 @@
+# Hydroxyl-terminated polybutadiene (HTPB), cured
+schema: fuel/1
+name: htpb
+display_name: "HTPB (hydroxyl-terminated polybutadiene)"
+density:
+  value: 900.0            # [kg/m^3]
+  source: "HRAP HTPB.mat (prop_Rho); Chiaverini & Kuo report ~919-930 cured"
+  verify: true
+composition:              # effective formula, curative-dependent
+  C: 7.3165
+  H: 10.3360
+  O: 0.1063
+composition_source: "Common CEA HTPB card; verify against RocketCEA built-in at E2"
+enthalpy_of_formation: null   # filled at E2 from CEA/Cantera species cards
+regression:
+  - oxidizer: n2o
+    model: power_law
+    a: 1.98e-4            # HRAP value 0.198 interpreted as mm/s basis -> SI
+    n: 0.325
+    m: 0.0
+    flux_basis: oxidizer
+    source: "HRAP HTPB.mat (prop_Reg = [0.198, 0.325, 0]); unit convention to confirm at E4"
+    verify: true
+notes: >
+  Composition varies with curative (IPDI/MDI) and additives; treat the
+  effective formula and hf as one consistent pair from the same source.

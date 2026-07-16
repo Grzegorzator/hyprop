@@ -1,0 +1,27 @@
+# Acrylonitrile-butadiene-styrene (ABS)
+schema: fuel/1
+name: abs
+display_name: "ABS (acrylonitrile butadiene styrene)"
+density:
+  value: 1070.0           # [kg/m^3]
+  source: "HRAP ABS.mat (prop_Rho); typical 1040-1070 (printed lower)"
+  verify: false
+composition:              # effective formula (typical 50/25/25 SAN/B ratio)
+  C: 3.85
+  H: 4.85
+  N: 0.43
+composition_source: "Whitmore et al. (USU) ABS characterization; verify at E2"
+enthalpy_of_formation: null   # filled at E2 from CEA/Cantera species cards
+regression:
+  - oxidizer: n2o
+    model: power_law
+    a: 1.98e-4
+    n: 0.325
+    m: 0.0
+    flux_basis: oxidizer
+    source: "HRAP ABS.mat (prop_Reg identical to HTPB entry - HRAP placeholder); LOW CONFIDENCE"
+    verify: true
+notes: >
+  HRAP ships ABS with the same ballistic coefficients as HTPB (placeholder).
+  For design use, calibrate from Whitmore's data or own fire tests (E4).
+  3D-printed ABS density and composition depend on infill and blend.

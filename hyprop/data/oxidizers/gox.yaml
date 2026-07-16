@@ -1,0 +1,15 @@
+# Gaseous oxygen (GOX)
+schema: oxidizer/1
+name: gox
+display_name: "Gaseous oxygen (GOX)"
+formula: {O: 2}
+molar_mass_kg_mol: 0.031999     # NIST
+critical_temperature_k: 154.58  # NIST WebBook
+critical_pressure_pa: 5.043e6   # NIST WebBook
+phase_at_storage: "compressed gas"
+property_backends:
+  - coolprop
+reference_density: null          # state-dependent; from EOS at (T, p)
+notes: >
+  Typical for lab-scale motors; tank model: pressure_fed (regulated) or
+  gas blowdown (to be added if needed).

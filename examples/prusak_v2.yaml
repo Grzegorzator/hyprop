@@ -1,0 +1,37 @@
+# prusak_v2 - 1 kN HDPE/N2O engine (validation reference vs HRAP output)
+# Geometry/tank values to be aligned with prusak_v2.mat at stage E6 benchmark.
+version: "0.1"
+name: prusak_v2
+mission:
+  thrust_n: "1 kN"
+  burn_time_s: "7 s"
+  design_altitude_m: 1500.0
+  safety_factor: 1.5
+oxidizer:
+  name: n2o
+  temperature_k: 293.15          # saturation pressure follows from T
+fuel:
+  name: hdpe                     # regression from database (HRAP HDPE.mat)
+grain:
+  geometry: cylindrical
+  length_m: "300 mm"             # placeholder - align with prusak_v2.mat at E6
+  outer_diameter_m: "80 mm"      # placeholder - align with prusak_v2.mat at E6
+  port:
+    initial_diameter_m: 0.030    # placeholder - align with prusak_v2.mat at E6
+tank:
+  model: equilibrium_blowdown
+  oxidizer_mass_kg: 5.0          # placeholder - align with prusak_v2.mat at E6
+injector:
+  model: spi
+  discharge_coefficient: 0.66
+  orifice_count: 8
+  orifice_diameter_m: "1.5 mm"
+nozzle:
+  expansion_ratio: 5.25          # final design value (eps 5.2-5.3)
+  divergence_half_angle_deg: 15.0
+efficiencies:
+  eta_cstar: 0.90
+simulation:
+  dt_s: 0.01
+  pc_solver: fixed_point
+  cea_backend: auto

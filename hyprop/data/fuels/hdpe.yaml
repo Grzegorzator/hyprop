@@ -1,0 +1,25 @@
+# High-density polyethylene (HDPE), monomer C2H4
+schema: fuel/1
+name: hdpe
+display_name: "HDPE (high-density polyethylene)"
+density:
+  value: 970.0            # [kg/m^3]
+  source: "HRAP HDPE.mat (prop_Rho); typical datasheet range 940-970"
+  verify: false
+composition:              # per monomer unit
+  C: 2
+  H: 4
+composition_source: "Polyethylene repeat unit (C2H4)n"
+enthalpy_of_formation: null   # filled at E2 from CEA/Cantera species cards
+regression:
+  - oxidizer: n2o
+    model: power_law
+    a: 1.04e-4            # HRAP value 0.104 interpreted as mm/s basis -> SI
+    n: 0.352
+    m: 0.0
+    flux_basis: oxidizer
+    source: "HRAP HDPE.mat (prop_Reg = [0.104, 0.352, 0]); unit convention to confirm at E4"
+    verify: true
+notes: >
+  Selected fuel of the prusak_v2 1 kN engine (project pivot paraffin -> PE).
+  Low regression rate vs paraffin; check port count/length consequences.

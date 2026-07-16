@@ -1,0 +1,18 @@
+# Poly(methyl methacrylate) (PMMA), monomer C5H8O2
+schema: fuel/1
+name: pmma
+display_name: "PMMA (poly(methyl methacrylate))"
+density:
+  value: 1180.0           # [kg/m^3]
+  source: "Typical cast PMMA datasheet (1170-1200)"
+  verify: false
+composition:              # per monomer unit
+  C: 5
+  H: 8
+  O: 2
+composition_source: "PMMA repeat unit (C5H8O2)n"
+enthalpy_of_formation: null   # filled at E2 from CEA/Cantera species cards
+regression: []            # no trusted a,n for N2O yet; to be filled at E4 from literature
+notes: >
+  Often used in lab-scale motors (optical access). Regression data to be
+  sourced at E4 (e.g. GOX data exists; N2O data sparse).

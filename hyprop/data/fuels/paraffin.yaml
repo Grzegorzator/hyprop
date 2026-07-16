@@ -1,0 +1,34 @@
+# Paraffin wax fuel (surrogate: n-dotriacontane C32H66)
+schema: fuel/1
+name: paraffin
+display_name: "Paraffin wax"
+density:
+  value: 900.0            # [kg/m^3]
+  source: "HRAP Paraffin.mat (prop_Rho); Karabeyoglu et al. 2004 report 924.5 for SP-1a"
+  verify: true
+composition:              # per surrogate molecule
+  C: 32
+  H: 66
+composition_source: "User's Cantera scripts (07_cantera_punkt0): C32H66 surrogate"
+enthalpy_of_formation: null   # filled at E2 from CEA/Cantera species cards
+regression:
+  # rdot = a * G^n * L^m ; SI: rdot [m/s], G [kg/(m^2 s)], L [m]
+  - oxidizer: n2o
+    model: power_law
+    a: 3.04e-5            # HRAP value 0.0304 interpreted as mm/s basis -> SI
+    n: 0.681
+    m: 0.0
+    flux_basis: oxidizer
+    source: "HRAP Paraffin.mat (prop_Reg = [0.0304, 0.681, 0]); unit convention to confirm at E4"
+    verify: true
+  - oxidizer: n2o
+    model: power_law
+    a: 1.32e-4            # user's conservative design value (06_hybrid_solver.py)
+    n: 0.65
+    m: 0.0
+    flux_basis: oxidizer
+    source: "MELprop 06_hybrid_solver.py (a=0.132 mm/s basis, n=0.65); conservative, pending fire tests"
+    verify: true
+notes: >
+  Liquefying fuel (entrainment regime, Karabeyoglu). Classical a,n power law
+  is an effective fit; literature scatter is large (+-30% or more).
