@@ -8,7 +8,7 @@ through HRAP-like transient simulation and Representative Operating Points
 
 Full design & development plan: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Status: stage E11 of 12 complete
+## Status: ALL 12 STAGES COMPLETE (v0.1.0)
 
 | Stage | Scope | Status |
 |---|---|---|
@@ -24,9 +24,9 @@ Full design & development plan: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | E9 | Batch (grid/LHS, CEA-table cache), sensitivity (OAT default, Morris/Sobol via SALib), Monte Carlo uncertainty, port Re/Ma regime flags | done |
 | E10 | Exports (CSV/XLSX/JSON + config YAML), NASA-style LaTeX report (auto-PDF when pdflatex present), user database (YAML: engines/materials/injectors/tests) | done |
 | E11 | Optimization: differential evolution (scipy) + NSGA-II (pymoo, optional) over config paths, objectives/constraints on ROP metrics with penalty method | done |
-| E12 | GUI (PySide6) + final docs | next |
+| E12 | GUI (PySide6, MVVM: Qt-free viewmodel + main window; `hyprop-gui` entry point) | done |
 
-Tests: **117 passing** (`pytest`). Physical model decisions log: D1-D10 in
+Tests: **120 passing** (`pytest`). Physical model decisions log: D1-D10 in
 `docs/ARCHITECTURE.md` par. 8. Resolved: D1 (N2O props: ESDU 91022 in the
 solver loop + CoolProp for injector thermodynamics and cross-validation),
 D2 (tank: thermodynamic-equilibrium adiabatic blowdown, HRAP-compatible),
@@ -115,10 +115,24 @@ hyprop/simulation/ transient solver: tank-injector-chamber-regression-
 hyprop/oppoints/   Representative Operating Points hub: time/thrust/mdot/
                    Pc/heat-flux-proxy/custom weighted averages, peak &
                    percentile points, phase statistics, recommendations
-hyprop/api.py      public API: load/save config, run (size/batch: E8/E9)
-tests/             pytest suite (117 tests)
+hyprop/sizing/     inverse design api.size (analytic guess + ROP loop)
+hyprop/batch/      case grids/LHS over config paths
+hyprop/analysis/   sensitivity (OAT/Morris/Sobol), Monte Carlo, Re/Ma flags
+hyprop/export/     CSV/XLSX/JSON tables + NASA-style LaTeX/PDF report
+hyprop/database/   user records (YAML): engines, materials, injectors, tests
+hyprop/optimization/ DE (scipy) + NSGA-II (pymoo) on ROP objectives
+hyprop/gui/        PySide6 app: hyprop-gui (pip install -e .[gui])
+hyprop/api.py      public API: load/save config, run, size
+tests/             pytest suite (120 tests)
 docs/              architecture & model documentation
 ```
+
+## Roadmap (post-v0.1)
+
+RocketCEA backend validation on Windows (needs MinGW gfortran);
+Zilliac-Karabeyoglu non-equilibrium tank; Bray sudden-freeze nozzle
+chemistry; real-gas vapour blowdown (D7); nozzle erosion; trajectory
+module coupled to sizing; OpenMDAO integration; CFD hooks.
 
 ## Authors
 
