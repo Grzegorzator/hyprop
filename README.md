@@ -8,7 +8,7 @@ through HRAP-like transient simulation and Representative Operating Points
 
 Full design & development plan: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Status: stage E6 of 12 complete
+## Status: stage E7 of 12 complete
 
 | Stage | Scope | Status |
 |---|---|---|
@@ -19,10 +19,11 @@ Full design & development plan: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | E4 | `regression/` (power law, G_ox/G_total) + `nozzle/losses` + `performance/` | done |
 | E5 | `tank/` (equilibrium N2O blowdown, ESDU 91022 + CoolProp) + `injector/` (SPI default, NHNE, HEM) | done |
 | E6 | Transient solver (`api.run`, tabulated CEA, fixed-point/Brent Pc) + HRAP benchmark | done |
-| E7 | Representative Operating Points (`oppoints/`) | next |
-| E8-E12 | Sizing, batch/sensitivity/uncertainty, exports & NASA-style report, optimization, GUI | planned |
+| E7 | Representative Operating Points (`oppoints/`: weighted averages, design points, phases, impulse percentiles) | done |
+| E8 | Inverse sizing + chamber + nozzle sizing on ROP points | next |
+| E9-E12 | Batch/sensitivity/uncertainty, exports & NASA-style report, optimization, GUI | planned |
 
-Tests: **95 passing** (`pytest`). Physical model decisions log: D1-D10 in
+Tests: **101 passing** (`pytest`). Physical model decisions log: D1-D10 in
 `docs/ARCHITECTURE.md` par. 8. Resolved: D1 (N2O props: ESDU 91022 in the
 solver loop + CoolProp for injector thermodynamics and cross-validation),
 D2 (tank: thermodynamic-equilibrium adiabatic blowdown, HRAP-compatible),
@@ -49,6 +50,10 @@ shifting equilibrium default, frozen reported as lower bound).
   confirms the HRAP unit conversion. See examples/benchmark_prusak_v2.py.
 * Example sizing delivered: examples/hdpe_05kN.yaml - HDPE/N2O, 0.5 kN,
   It = 3942 Ns, Pc 37 bar, LRO 7.4 s (examples/sizing_hdpe_05kN.py).
+* ROP demo (examples/rop_hdpe_05kN.py): plain time averages understate
+  thrust by 51% and Pc by 48% vs impulse-weighted values - the liquid
+  phase delivers 92.4% of impulse in 42.6% of burn time; this is why all
+  design modules read the impulse-weighted point, never time averages.
 
 ## Install (development)
 
@@ -99,8 +104,11 @@ hyprop/data/       built-in propellant databases (YAML, sourced values,
                    verify flags)
 hyprop/simulation/ transient solver: tank-injector-chamber-regression-
                    nozzle coupling per time step (HRAP loop), events
+hyprop/oppoints/   Representative Operating Points hub: time/thrust/mdot/
+                   Pc/heat-flux-proxy/custom weighted averages, peak &
+                   percentile points, phase statistics, recommendations
 hyprop/api.py      public API: load/save config, run (size/batch: E8/E9)
-tests/             pytest suite (95 tests)
+tests/             pytest suite (101 tests)
 docs/              architecture & model documentation
 ```
 
