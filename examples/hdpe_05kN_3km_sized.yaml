@@ -1,0 +1,51 @@
+version: '0.1'
+name: sized_hdpe_500N
+mission:
+  thrust_n: 500.0
+  total_impulse_ns: 4000.0
+  burn_time_s: 8.0
+  design_altitude_m: 1000.0
+  ambient_pressure_pa: 101325.0
+  min_isp_s: null
+  safety_factor: 1.5
+oxidizer:
+  name: n2o
+  temperature_k: 293.15
+  tank_pressure_pa: null
+  overrides: {}
+fuel:
+  name: hdpe
+  density_kg_m3: null
+  regression: null
+  overrides: {}
+grain:
+  geometry: cylindrical
+  length_m: 0.5080252130948734
+  outer_diameter_m: 0.04313636125423799
+  port:
+    initial_diameter_m: 0.025997243922216768
+tank:
+  model: equilibrium_blowdown
+  volume_m3: 0.0023994903359320827
+  oxidizer_mass_kg: 1.6611251018189896
+  parameters: {}
+injector:
+  model: spi
+  discharge_coefficient: 0.6
+  orifice_count: 4
+  orifice_diameter_m: 0.0016508093197498427
+nozzle:
+  throat_diameter_m: 0.011676602280037524
+  expansion_ratio: 5.016723777515973
+  divergence_half_angle_deg: 15.0
+  efficiency: 0.9673
+  discharge_coefficient: 0.98
+efficiencies:
+  eta_cstar: 0.95
+simulation:
+  dt_s: 0.02
+  t_max_s: 60.0
+  pc_solver: fixed_point
+  pc_tolerance: 0.0001
+  max_iterations: 200
+  cea_backend: auto

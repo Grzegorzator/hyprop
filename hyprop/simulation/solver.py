@@ -235,9 +235,22 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
             pc_new, flow = chamber_balance(pc_iter, fluid)
             if abs(pc_new - pc_iter) < settings.pc_tolerance * max(pc_iter, 1e4):
                 return pc_new, flow
-            pc_iter = 0.5 * pc_iter + 0.5 * pc_new
-        _log.warning("Pc fixed-point hit iteration budget at t=%.3f s", time_s)
-        return pc_iter, flow
+            # clamp into the physical band (oscillation guard)
+            pc_iter = min(max(0.5 * pc_iter + 0.5 * pc_new, 0.2 * ambient),
+                          0.99 * fluid.pressure_pa)
+        # Fixed point oscillates (stiff injector/throat coupling near
+        # flooding); fall back to Brent - the balance residual always
+        # brackets a root in [ambient, ~p_tank] since mdot -> 0 there.
+        try:
+            pc_root = brentq(
+                lambda p: chamber_balance(p, fluid)[0] - p,
+                0.5 * ambient, 0.995 * fluid.pressure_pa,
+                xtol=settings.pc_tolerance * fluid.pressure_pa)
+            return pc_root, chamber_balance(pc_root, fluid)[1]
+        except ValueError:
+            _log.warning("Pc solve failed at t=%.3f s (no equilibrium)",
+                         time_s)
+            return pc_iter, flow
 
     _log.info("Transient start: %s", config.name)
     while time_s < settings.t_max_s:

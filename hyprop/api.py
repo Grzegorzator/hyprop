@@ -70,11 +70,16 @@ def run_batch(cases, n_jobs: int = -1):
     )
 
 
-def size(mission):
-    """Inverse design: mission requirements -> initial EngineConfig.
+def size(thrust_n: float, total_impulse_ns: float, apogee_m: float,
+         **kwargs):
+    """Inverse design: mission -> converged EngineConfig (stage E8).
 
-    Implemented in stage E8 (sizing module).
+    Returns
+    -------
+    hyprop.sizing.SizingResult
+        Converged config + nozzle design + achieved metrics + warnings.
     """
-    raise NotImplementedError(
-        "api.size() arrives with stage E8 (sizing module)."
-    )
+    from hyprop.sizing import size_engine
+
+    _bootstrap()
+    return size_engine(thrust_n, total_impulse_ns, apogee_m, **kwargs)
