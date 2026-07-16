@@ -57,9 +57,15 @@ _OXIDIZER_SPECIES = {"n2o": "N2O", "lox": "O2", "gox": "O2", "htp": "H2O2"}
 
 _FUEL_SPECIES_NAME = "FUEL_SURROGATE"
 
-#: Default molar cp of the surrogate [J/(kmol*K)]; irrelevant for results
-#: (see module notes) but required by the ConstantCp thermo model.
-_SURROGATE_CP_J_KMOL_K = 2.2e6
+#: Mass-specific cp of the surrogate [J/(kg*K)]; scaled by molar mass to
+#: a molar value. Nearly irrelevant for results (reactants enter at the
+#: reference temperature) but a molar cp grossly oversized for a small
+#: formula unit (e.g. C2H4) traps 'HP' equilibrate in a cold solution.
+#: 2.2e6 J/kmol/K for C32H66 (user's script) == ~4.9e3 J/kg/K.
+_SURROGATE_CP_J_KG_K = 4.9e3
+
+_ATOMIC_MASS_KG_KMOL = {"C": 12.011, "H": 1.008, "O": 15.999, "N": 14.007,
+                        "S": 32.06, "Cl": 35.45}
 
 #: Surrogate thermo validity range [K] and reference pressure [Pa].
 _SURROGATE_T_RANGE = (200.0, 3500.0)
@@ -110,11 +116,16 @@ class CanteraBackend(ThermochemistryBackend):
         )
         surrogate = ct.Species(_FUEL_SPECIES_NAME, composition)
         hf_j_kmol = self.fuel.enthalpy_of_formation.value * 1000.0  # J/mol -> J/kmol
+        molar_mass = sum(
+            _ATOMIC_MASS_KG_KMOL[el] * n
+            for el, n in self.fuel.composition.items()
+        )                                            # [kg/kmol]
+        cp_j_kmol_k = _SURROGATE_CP_J_KG_K * molar_mass
         surrogate.thermo = ct.ConstantCp(
             _SURROGATE_T_RANGE[0],
             _SURROGATE_T_RANGE[1],
             101325.0,
-            (T_REF_THERMO, hf_j_kmol, 0.0, _SURROGATE_CP_J_KMOL_K),
+            (T_REF_THERMO, hf_j_kmol, 0.0, cp_j_kmol_k),
         )
         return ct.Solution(
             thermo="ideal-gas", species=[surrogate] + list(base.species())
@@ -233,11 +244,22 @@ class CanteraBackend(ThermochemistryBackend):
                 return 1e9
             return g_throat / (rho * u) - eps       # local A/At - eps
 
+        # Bracket around the ideal-gas estimate of pe (avoids equilibrate
+        # calls at extreme vacuum, which destabilise rich/lean mixtures).
+        from hyprop.physics.compressible import exit_pressure_ratio
+        gamma_c = self._gas.cp / self._gas.cv
+        pe_estimate = pc * exit_pressure_ratio(eps, min(max(gamma_c, 1.05),
+                                                        1.66))
+        lower, upper = 0.2 * pe_estimate, min(5.0 * pe_estimate, 0.5 * pc)
         try:
-            p_exit = brentq(residual, 1.0, 0.5 * pc, xtol=0.1)
-        except ValueError as exc:
-            raise ConvergenceError(
-                f"Exit area-ratio eps={eps} not bracketed."
-            ) from exc
+            p_exit = brentq(residual, lower, upper, xtol=0.1)
+        except ValueError:
+            try:                                    # widen once
+                p_exit = brentq(residual, 0.02 * pe_estimate, 0.5 * pc,
+                                xtol=0.1)
+            except ValueError as exc:
+                raise ConvergenceError(
+                    f"Exit area-ratio eps={eps} not bracketed."
+                ) from exc
         ve, _, _ = self._flow_state(p_exit, h_c, s_c, frozen, composition)
         return self._station(self._gas), ve

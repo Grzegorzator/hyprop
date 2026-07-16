@@ -50,13 +50,17 @@ def save_config(config: EngineConfig, path: Union[str, Path]) -> None:
 
 
 def run(config: EngineConfig):
-    """Run the transient simulation for one case.
+    """Run the transient simulation for one case (stage E6).
 
-    Implemented in stage E6 (simulation/solver).
+    Returns
+    -------
+    hyprop.simulation.SimulationResult
+        Full time history, event log and summary metrics.
     """
-    raise NotImplementedError(
-        "api.run() arrives with stage E6 (transient solver)."
-    )
+    from hyprop.simulation import run_simulation
+
+    _bootstrap()
+    return run_simulation(config)
 
 
 def run_batch(cases, n_jobs: int = -1):

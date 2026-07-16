@@ -1,0 +1,85 @@
+"""Fast unit tests of the transient solver loop (stubbed thermochemistry).
+
+The full HRAP benchmark lives in examples/benchmark_prusak_v2.py (needs
+~40 s: real Cantera table). Here the CEA table is monkeypatched with an
+analytic stub so the coupling logic is tested in milliseconds.
+"""
+
+import math
+
+import pytest
+
+import hyprop.simulation.solver as solver_module
+from hyprop.cea.backend import CEAResult, ExpansionResult, StationState
+from hyprop.core.config import EngineConfig
+
+
+class _StubCEA:
+    """Constant-property thermochemistry: c*=1550, ve=2200, pe=0.4 bar."""
+    of_range = (2.0, 14.0)
+    pc_range = (1.5e5, 60e5)
+
+    def query(self, of, pc, eps):
+        chamber = StationState(3300.0, pc, 1.25, 0.026, 1900.0)
+        throat = StationState(3100.0, 0.55 * pc, 1.25, 0.026)
+        exit_s = StationState(1800.0, 0.4e5, 1.28, 0.026)
+        return CEAResult(
+            of=of, pc_pa=pc, eps=eps, chamber=chamber, throat=throat,
+            equilibrium=ExpansionResult(exit_s, 2200.0),
+            frozen=ExpansionResult(exit_s, 2150.0),
+            cstar_m_s=1550.0, backend="stub",
+        )
+
+
+@pytest.fixture()
+def stub_cea(monkeypatch):
+    monkeypatch.setattr(
+        solver_module, "_build_cea_table", lambda config, eps: _StubCEA()
+    )
+
+
+CFG = dict(
+    name="unit_test_motor",
+    mission=dict(thrust_n=500.0, burn_time_s=10.0,
+                 ambient_pressure_pa=101325.0),
+    oxidizer=dict(name="n2o", temperature_k=293.15),
+    fuel=dict(name="hdpe", density_kg_m3=920.0),
+    grain=dict(geometry="cylindrical", length_m=0.45,
+               outer_diameter_m=0.050,
+               port=dict(initial_diameter_m=0.028)),
+    tank=dict(model="equilibrium_blowdown", volume_m3=2.8e-3,
+              oxidizer_mass_kg=1.9),
+    injector=dict(model="spi", discharge_coefficient=0.60,
+                  orifice_count=5, orifice_diameter_m=1.4e-3),
+    nozzle=dict(throat_diameter_m=11.5e-3, expansion_ratio=5.3),
+    simulation=dict(dt_s=0.02, t_max_s=30.0),
+)
+
+
+def test_transient_runs_and_is_physical(stub_cea):
+    result = solver_module.run_simulation(EngineConfig.from_dict(CFG))
+    h = result.history
+    assert len(h) > 50
+    assert result.summary["total_impulse_ns"] > 0
+    # Pc must stay below tank pressure and above ambient while burning:
+    assert (h["pc"] < h["p_tank"]).all()
+    assert h["pc"].max() > 5e5
+    # impulse channel is the cumulative integral of thrust:
+    assert h["impulse"][-1] == pytest.approx(
+        result.summary["total_impulse_ns"], rel=1e-9)
+    # events recorded and ordered:
+    names = [e for _, e in result.events]
+    assert "liquid_runout" in names
+
+
+def test_brent_matches_fixed_point(stub_cea):
+    cfg_fp = EngineConfig.from_dict(CFG)
+    raw = dict(CFG); raw["simulation"] = dict(dt_s=0.02, t_max_s=30.0,
+                                              pc_solver="brent")
+    cfg_br = EngineConfig.from_dict(raw)
+    r_fp = solver_module.run_simulation(cfg_fp)
+    r_br = solver_module.run_simulation(cfg_br)
+    assert r_br.summary["peak_pc_pa"] == pytest.approx(
+        r_fp.summary["peak_pc_pa"], rel=0.01)
+    assert r_br.summary["total_impulse_ns"] == pytest.approx(
+        r_fp.summary["total_impulse_ns"], rel=0.02)

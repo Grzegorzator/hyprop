@@ -8,7 +8,7 @@ through HRAP-like transient simulation and Representative Operating Points
 
 Full design & development plan: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Status: stage E5 of 12 complete
+## Status: stage E6 of 12 complete
 
 | Stage | Scope | Status |
 |---|---|---|
@@ -18,11 +18,11 @@ Full design & development plan: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | E3 | `geometry/` (cylindrical, multiport, star, wagon wheel, custom via contour offset) | done |
 | E4 | `regression/` (power law, G_ox/G_total) + `nozzle/losses` + `performance/` | done |
 | E5 | `tank/` (equilibrium N2O blowdown, ESDU 91022 + CoolProp) + `injector/` (SPI default, NHNE, HEM) | done |
-| E6 | Transient solver (`api.run`) + HRAP benchmark (prusak_v2) | next |
-| E7 | Representative Operating Points (`oppoints/`) | planned |
+| E6 | Transient solver (`api.run`, tabulated CEA, fixed-point/Brent Pc) + HRAP benchmark | done |
+| E7 | Representative Operating Points (`oppoints/`) | next |
 | E8-E12 | Sizing, batch/sensitivity/uncertainty, exports & NASA-style report, optimization, GUI | planned |
 
-Tests: **93 passing** (`pytest`). Physical model decisions log: D1-D10 in
+Tests: **95 passing** (`pytest`). Physical model decisions log: D1-D10 in
 `docs/ARCHITECTURE.md` par. 8. Resolved: D1 (N2O props: ESDU 91022 in the
 solver loop + CoolProp for injector thermodynamics and cross-validation),
 D2 (tank: thermodynamic-equilibrium adiabatic blowdown, HRAP-compatible),
@@ -41,8 +41,14 @@ shifting equilibrium default, frozen reported as lower bound).
   convention confirmed in HRAP propellant_template.m).
 * N2O saturation properties: ESDU 91022 correlations cross-validated
   against CoolProp (psat, rho_l within 1.5%, 263-303 K).
-* Stage E6 will benchmark the full transient against
-  `prusakv2_HRAP_output.csv`.
+* **E6 transient benchmark vs HRAP (prusak_v2, HDPE/N2O)**: liquid-phase
+  mean deviations Pc 1.7%, tank pressure 0.6%, O/F 1.0%, thrust 6.2%;
+  LRO 7.19 s vs ~7.5 s. Thrust surplus is methodological (HyProp uses
+  shifting-equilibrium exhaust velocity; HRAP uses RPA-table Cf, closer
+  to frozen). CSV-implied regression a = 1.040e-4 SI independently
+  confirms the HRAP unit conversion. See examples/benchmark_prusak_v2.py.
+* Example sizing delivered: examples/hdpe_05kN.yaml - HDPE/N2O, 0.5 kN,
+  It = 3942 Ns, Pc 37 bar, LRO 7.4 s (examples/sizing_hdpe_05kN.py).
 
 ## Install (development)
 
@@ -91,8 +97,10 @@ hyprop/injector/   SPI (default), HEM, NHNE (Dyer) orifice models
 hyprop/regression/ power-law rdot = a*G^n*L^m (G_ox / G_total)
 hyprop/data/       built-in propellant databases (YAML, sourced values,
                    verify flags)
-hyprop/api.py      public API: load/save config (run/size/batch: E6/E8/E9)
-tests/             pytest suite (93 tests)
+hyprop/simulation/ transient solver: tank-injector-chamber-regression-
+                   nozzle coupling per time step (HRAP loop), events
+hyprop/api.py      public API: load/save config, run (size/batch: E8/E9)
+tests/             pytest suite (95 tests)
 docs/              architecture & model documentation
 ```
 

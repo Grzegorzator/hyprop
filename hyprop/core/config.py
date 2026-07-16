@@ -235,6 +235,11 @@ class NozzleSpec(_Model):
         description="Additional nozzle efficiency multiplier eta_noz [-] "
         "(divergence loss is computed separately from the half-angle).",
     )
+    discharge_coefficient: float = Field(
+        1.0, gt=0, le=1.0,
+        description="Throat discharge coefficient Cd_noz [-] (HRAP noz_Cd): "
+        "effective throat area = Cd_noz * At.",
+    )
 
     _v_dt = field_validator("throat_diameter_m", mode="before")(_unit_validator("m"))
 
