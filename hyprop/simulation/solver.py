@@ -125,9 +125,22 @@ def _build_components(config: EngineConfig):
     return fuel, fuel_density, geometry, regression, tank, injector
 
 
+#: Process-wide table cache: (fuel, oxidizer, round(eps,2)) -> table.
+#: Batch/sensitivity runs mutate injector/tank/grain parameters far more
+#: often than propellants or eps; rebuilding the ~20 s Cantera sweep for
+#: every case would dominate runtime.
+_TABLE_CACHE: Dict[Tuple[str, str, float, int, int], TabulatedBackend] = {}
+
+
 def _build_cea_table(config: EngineConfig, eps: float) -> TabulatedBackend:
     """Sweep the Cantera backend over an (O/F, Pc) grid (HRAP pattern)."""
     import numpy as np
+
+    key = (config.fuel.name, config.oxidizer.name, round(eps, 2),
+           _TABLE_OF, _TABLE_PC)
+    cached = _TABLE_CACHE.get(key)
+    if cached is not None:
+        return cached
 
     backend: ThermochemistryBackend = CanteraBackend(
         fuel=config.fuel.name, oxidizer=config.oxidizer.name
@@ -136,7 +149,9 @@ def _build_cea_table(config: EngineConfig, eps: float) -> TabulatedBackend:
     # (missing condensed carbon); the transient never goes there anyway.
     of_grid = np.linspace(2.0, 14.0, _TABLE_OF)
     pc_grid = np.linspace(1.5e5, 60e5, _TABLE_PC)
-    return TabulatedBackend(backend, of_grid, pc_grid, eps)
+    table = TabulatedBackend(backend, of_grid, pc_grid, eps)
+    _TABLE_CACHE[key] = table
+    return table
 
 
 def run_simulation(config: EngineConfig) -> SimulationResult:
