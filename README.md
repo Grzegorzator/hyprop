@@ -6,9 +6,38 @@ Engineering tool for hybrid rocket motor design: from mission requirements,
 through HRAP-like transient simulation and Representative Operating Points
 (ROP), to optimization, NASA-style reports and a PySide6 GUI.
 
-Status: **stage E1 of 12** (core foundation). See
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design and
-development plan.
+Full design & development plan: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+## Status: stage E4 of 12 complete
+
+| Stage | Scope | Status |
+|---|---|---|
+| E0 | Architecture v0.2 (physics/ layer, API-first, plugin registry, ROP-centric) | done |
+| E1 | `core/` (Pint units, versioned `EngineConfig`, registry, logging, `TimeHistory`) + `data/` (5 fuels, 4 oxidizers, sourced values) | done |
+| E2 | `physics/compressible` (isentropic nozzle flow, Sutton Ch. 3) + `cea/` (RocketCEA & Cantera backends, equilibrium + frozen, cache) | done |
+| E3 | `geometry/` (cylindrical, multiport, star, wagon wheel, custom via contour offset) | done |
+| E4 | `regression/` (power law, G_ox/G_total) + `nozzle/losses` + `performance/` | done |
+| E5 | `tank/` (N2O blowdown) + `injector/` (SPI/NHNE/HEM) | next |
+| E6 | Transient solver (`api.run`) + HRAP benchmark (prusak_v2) | planned |
+| E7 | Representative Operating Points (`oppoints/`) | planned |
+| E8-E12 | Sizing, batch/sensitivity/uncertainty, exports & NASA-style report, optimization, GUI | planned |
+
+Tests: **82 passing** (`pytest`). Physical model decisions log: D1-D10 in
+`docs/ARCHITECTURE.md` par. 8 (D6 resolved: shifting equilibrium default,
+frozen reported as lower bound).
+
+## Validation anchors
+
+* Cantera backend vs user's validated `07_cantera` script (paraffin
+  C32H66/N2O, Pc 35 bar, O/F 6.5): Tc 3292 K, gamma 1.245, Isp 247 s -
+  agreement <1%; equilibrium c* exceeds ideal-formula c* by ~2.3%
+  (documented methodological difference).
+* `physics/compressible` vs Anderson isentropic tables & Sutton Cf example.
+* Regression coefficients a, n extracted from HRAP `.mat` configs
+  (HDPE 0.104/0.352, paraffin 0.0304/0.681, HTPB 0.198/0.325; mm/s
+  convention confirmed in HRAP propellant_template.m).
+* Stage E6 will benchmark the full transient against
+  `prusakv2_HRAP_output.csv`.
 
 ## Install (development)
 
@@ -17,33 +46,49 @@ pip install -e .[dev]
 pytest
 ```
 
-Optional extras: `cea` (RocketCEA), `cantera`, `props` (CoolProp),
-`opt` (pymoo, SALib), `export`, `gui` (PySide6).
+Optional extras: `cea` (RocketCEA; needs a Fortran compiler), `cantera`,
+`props` (CoolProp), `opt` (pymoo, SALib), `export`, `gui` (PySide6).
 
-## Quick start (E1 scope)
+## Quick start
 
 ```python
 import hyprop.api as api
-from hyprop.data import load_fuel, load_oxidizer
+from hyprop.cea import get_backend
+from hyprop.geometry import CylindricalGrain
 
 config = api.load_config("examples/prusak_v2.yaml")
-fuel = load_fuel(config.fuel.name)          # validated database entry
-print(fuel.regression_for("n2o"))           # rdot = a*G^n*L^m datasets
+
+cea = get_backend("auto", fuel="paraffin", oxidizer="n2o")
+result = cea.query(of=6.5, pc=35e5, eps=6.0)
+print(result.chamber.temperature_k, result.cstar_m_s,
+      result.isp_s(101325.0), result.isp_s(101325.0, mode="frozen"))
+
+grain = CylindricalGrain(length_m=0.3, outer_diameter_m=0.08,
+                         initial_diameter_m=0.03)
+print(grain.burn_area(w=0.005), grain.web_remaining(w=0.005))
 ```
 
 ## Layout
 
 ```
-hyprop/core/     units (Pint), constants, EngineConfig (versioned), plugin
-                 registry, logging, TimeHistory
-hyprop/data/     built-in propellant databases (YAML, sourced values)
-hyprop/api.py    public API: load_config/save_config (run/size/batch: E6/E8/E9)
-tests/           pytest suite
-docs/            architecture & model documentation
+hyprop/core/       units (Pint), constants, EngineConfig (versioned),
+                   plugin registry, logging, TimeHistory
+hyprop/physics/    shared equation library (compressible flow; no deps
+                   on other modules)
+hyprop/cea/        thermochemistry: RocketCEA (primary), Cantera
+                   (fallback), memoising cache
+hyprop/geometry/   grain ports as functions of burned web w: analytic
+                   (cylindrical, multiport) + contour-offset engine
+                   (star, wagon wheel, custom polygons; shapely)
+hyprop/data/       built-in propellant databases (YAML, sourced values,
+                   verify flags)
+hyprop/api.py      public API: load/save config (run/size/batch: E6/E8/E9)
+tests/             pytest suite (82 tests)
+docs/              architecture & model documentation
 ```
 
 ## Authors
 
 MASSLACZEK12 (design authority, physical models) & Claude (implementation).
 All empirical coefficients require confirmation by fire tests before
-design use — entries carry `verify` flags and sources.
+design use - entries carry `verify` flags and sources.

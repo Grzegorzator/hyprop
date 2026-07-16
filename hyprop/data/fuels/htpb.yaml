@@ -19,7 +19,7 @@ regression:
     n: 0.325
     m: 0.0
     flux_basis: oxidizer
-    source: "HRAP HTPB.mat (prop_Reg = [0.198, 0.325, 0]); unit convention to confirm at E4"
+    source: "HRAP HTPB.mat (prop_Reg = [0.198, 0.325, 0]); units CONFIRMED via HRAP propellant_template.m: rdot mm/s, G kg/m^2/s, L m"
     verify: true
 notes: >
   Composition varies with curative (IPDI/MDI) and additives; treat the

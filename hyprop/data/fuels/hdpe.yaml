@@ -21,7 +21,7 @@ regression:
     n: 0.352
     m: 0.0
     flux_basis: oxidizer
-    source: "HRAP HDPE.mat (prop_Reg = [0.104, 0.352, 0]); unit convention to confirm at E4"
+    source: "HRAP HDPE.mat (prop_Reg = [0.104, 0.352, 0]); units CONFIRMED via HRAP propellant_template.m: rdot mm/s, G kg/m^2/s, L m"
     verify: true
 notes: >
   Selected fuel of the prusak_v2 1 kN engine (project pivot paraffin -> PE).
