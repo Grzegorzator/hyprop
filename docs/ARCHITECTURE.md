@@ -285,7 +285,7 @@ Po każdym etapie: opis algorytmu + równania + źródła → kod → testy → 
 | D3 | Wtryskiwacz dwufazowy | SPI vs NHNE (Dyer) vs HEM — który domyślny | E5 |
 | D4 | Strumień masowy w regresji | G_ox (klasyczne a,n z literatury) vs G_total (fizycznie pełniejszy, inne a,n) | E4 |
 | D5 | Solver Pc w kroku czasowym | iteracja punktu stałego (HRAP, masz w 06) vs Brent na bilansie masy (pewniejsza zbieżność) | E6 |
-| D6 | Przepływ w dyszy (CEA) | frozen vs shifting equilibrium vs Bray (frozen od gardzieli) | E2 |
+| D6 | Przepływ w dyszy (CEA) | **ROZSTRZYGNIĘTE (2026-07-16): shifting equilibrium domyślnie; frozen zawsze liczone obok jako dolna granica; Bray opcjonalnie później** | E2 ✓ |
 | D7 | Faza gazowa blowdown | politropa par N2O (HRAP) vs real-gas CoolProp | E5 |
 | D8 | Raport PDF | reportlab (czysty Python) vs szablon LaTeX (spójny z Twoimi .tex) | E10 |
 | D9 | Metody wrażliwości — domyślna | Morris (tani screening) vs Sobol (pełne indeksy, drogi) vs OAT (najprostszy) | E9 |

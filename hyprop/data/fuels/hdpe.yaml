@@ -10,7 +10,10 @@ composition:              # per monomer unit
   C: 2
   H: 4
 composition_source: "Polyethylene repeat unit (C2H4)n"
-enthalpy_of_formation: null   # filled at E2 from CEA/Cantera species cards
+enthalpy_of_formation:        # [J/mol] per composition formula unit (C2H4)
+  value: -41.2e+03
+  source: "Two consistent routes: hf(C2H4,g)=+52.4 kJ/mol + dH_polymerization ~-93.5 kJ/mol; group additivity 2x CH2(-20.6 kJ/mol). TO CONFIRM vs CEA 'PE' card at E2 validation."
+  verify: true
 regression:
   - oxidizer: n2o
     model: power_law

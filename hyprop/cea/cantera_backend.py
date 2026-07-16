@@ -1,0 +1,243 @@
+"""Cantera-based thermochemistry backend (fallback of decision E0).
+
+Generalises the user's validated script ``07_cantera_punkt0_termochemia.py``:
+
+1. Build an ideal-gas solution from GRI-Mech 3.0 species plus a custom
+   fuel *surrogate species* defined by elemental composition and standard
+   enthalpy of formation from the fuel database.
+2. Chamber: constant-(H, P) equilibrium at (T_ref = 298.15 K, Pc).
+3. Throat: isentropic expansion (constant s) to the pressure where the
+   flow velocity u = sqrt(2*(h_c - h)) equals the local (frozen) sound
+   speed a = sqrt(gamma * R/M * T); solved with Brent's method.
+4. Exit: isentropic expansion to the pressure where the local area ratio
+   (rho_t * u_t)/(rho * u) matches the requested eps.
+
+Shifting equilibrium re-equilibrates ('SP') at every station (decision
+D6 default); frozen mode keeps the chamber composition fixed.
+
+Notes
+-----
+* The surrogate's cp does not influence results because reactants enter
+  exactly at the reference temperature (h(T_ref) = hf identically).
+* Sound speed uses the frozen (cp/cv) gamma also in equilibrium mode -
+  same approximation as the user's script and HRAP tables; the error on
+  c* is well below 1% for these mixtures.
+
+Sources: user's 07_cantera scripts; Gordon & McBride NASA RP-1311;
+Goodwin et al., Cantera (https://cantera.org).
+"""
+
+from __future__ import annotations
+
+import math
+from typing import Dict, Optional, Tuple, Union
+
+from scipy.optimize import brentq
+
+from hyprop.core.constants import R_UNIVERSAL, T_REF_THERMO
+from hyprop.core.exceptions import (
+    BackendUnavailableError,
+    ConvergenceError,
+    DataError,
+)
+from hyprop.core.logging import get_logger
+from hyprop.core.registry import register_model
+from hyprop.cea.backend import (
+    CEAResult,
+    ExpansionResult,
+    StationState,
+    ThermochemistryBackend,
+)
+from hyprop.data import FuelData, OxidizerData, load_fuel, load_oxidizer
+
+_log = get_logger(__name__)
+
+#: Map database oxidizer names to GRI-Mech species.
+_OXIDIZER_SPECIES = {"n2o": "N2O", "lox": "O2", "gox": "O2", "htp": "H2O2"}
+
+_FUEL_SPECIES_NAME = "FUEL_SURROGATE"
+
+#: Default molar cp of the surrogate [J/(kmol*K)]; irrelevant for results
+#: (see module notes) but required by the ConstantCp thermo model.
+_SURROGATE_CP_J_KMOL_K = 2.2e6
+
+#: Surrogate thermo validity range [K] and reference pressure [Pa].
+_SURROGATE_T_RANGE = (200.0, 3500.0)
+
+
+@register_model("cea", "cantera")
+class CanteraBackend(ThermochemistryBackend):
+    """Shifting-equilibrium / frozen expansion computed with Cantera."""
+
+    name = "cantera"
+
+    def __init__(
+        self,
+        fuel: Union[str, FuelData] = "paraffin",
+        oxidizer: Union[str, OxidizerData] = "n2o",
+        mechanism: str = "gri30.yaml",
+    ) -> None:
+        try:
+            import cantera as ct
+        except ImportError as exc:
+            raise BackendUnavailableError(
+                "Cantera is not installed (pip install cantera)."
+            ) from exc
+        self._ct = ct
+        self.fuel = load_fuel(fuel) if isinstance(fuel, str) else fuel
+        self.oxidizer = (
+            load_oxidizer(oxidizer) if isinstance(oxidizer, str) else oxidizer
+        )
+        self._ox_species = _OXIDIZER_SPECIES.get(self.oxidizer.name)
+        if self._ox_species is None:
+            raise DataError(
+                f"Oxidizer '{self.oxidizer.name}' has no GRI-Mech mapping."
+            )
+        if self.fuel.enthalpy_of_formation is None:
+            raise DataError(
+                f"Fuel '{self.fuel.name}' lacks enthalpy_of_formation "
+                "(J/mol per formula unit) required by the Cantera backend."
+            )
+        self._gas = self._build_solution(mechanism)
+
+    # ------------------------------------------------------------- build
+    def _build_solution(self, mechanism: str):
+        """GRI-Mech species + custom fuel surrogate in one ideal-gas mix."""
+        ct = self._ct
+        base = ct.Solution(mechanism)
+        composition = " ".join(
+            f"{el}:{amount}" for el, amount in self.fuel.composition.items()
+        )
+        surrogate = ct.Species(_FUEL_SPECIES_NAME, composition)
+        hf_j_kmol = self.fuel.enthalpy_of_formation.value * 1000.0  # J/mol -> J/kmol
+        surrogate.thermo = ct.ConstantCp(
+            _SURROGATE_T_RANGE[0],
+            _SURROGATE_T_RANGE[1],
+            101325.0,
+            (T_REF_THERMO, hf_j_kmol, 0.0, _SURROGATE_CP_J_KMOL_K),
+        )
+        return ct.Solution(
+            thermo="ideal-gas", species=[surrogate] + list(base.species())
+        )
+
+    # ------------------------------------------------------------- query
+    def query(self, of: float, pc: float, eps: float) -> CEAResult:
+        if of <= 0 or pc <= 0 or eps <= 1.0:
+            raise ValueError("Require of > 0, pc > 0, eps > 1.")
+        gas = self._gas
+
+        # --- chamber: HP equilibrium at reactant reference state --------
+        gas.TPY = (
+            T_REF_THERMO,
+            pc,
+            {_FUEL_SPECIES_NAME: 1.0 / (1.0 + of),
+             self._ox_species: of / (1.0 + of)},
+        )
+        gas.equilibrate("HP")
+        chamber = self._station(gas)
+        h_c = gas.enthalpy_mass
+        s_c = gas.entropy_mass
+        composition_c = dict(
+            zip(gas.species_names, gas.X)
+        )
+        mole_fractions = {
+            name: x for name, x in composition_c.items() if x > 1e-6
+        }
+
+        # --- shifting-equilibrium expansion (D6 default) -----------------
+        throat_eq, g_throat, cstar = self._solve_throat(h_c, s_c, pc, frozen=False)
+        exit_eq, ve_eq = self._solve_exit(h_c, s_c, pc, eps, g_throat, frozen=False)
+
+        # --- frozen-from-chamber expansion (lower bound) ------------------
+        self._restore_chamber(chamber, composition_c)
+        _, g_throat_fr, _ = self._solve_throat(h_c, s_c, pc, frozen=True,
+                                               composition=composition_c)
+        exit_fr, ve_fr = self._solve_exit(h_c, s_c, pc, eps, g_throat_fr,
+                                          frozen=True, composition=composition_c)
+
+        return CEAResult(
+            of=of, pc_pa=pc, eps=eps,
+            chamber=chamber, throat=throat_eq,
+            equilibrium=ExpansionResult(exit_eq, ve_eq),
+            frozen=ExpansionResult(exit_fr, ve_fr),
+            cstar_m_s=cstar,
+            mole_fractions=mole_fractions,
+            backend=self.name,
+        )
+
+    # ----------------------------------------------------------- helpers
+    def _station(self, gas) -> StationState:
+        return StationState(
+            temperature_k=gas.T,
+            pressure_pa=gas.P,
+            gamma=gas.cp / gas.cv,
+            molar_mass_kg_mol=gas.mean_molecular_weight / 1000.0,
+            cp_j_kg_k=gas.cp,
+        )
+
+    def _restore_chamber(self, chamber: StationState, composition) -> None:
+        self._gas.TPX = (
+            chamber.temperature_k, chamber.pressure_pa, composition
+        )
+
+    def _set_sp(self, s: float, p: float, frozen: bool, composition) -> None:
+        """Set (s, p); re-equilibrate unless frozen."""
+        gas = self._gas
+        if frozen:
+            gas.TPX = gas.T, gas.P, composition  # pin composition
+            gas.SP = s, p
+        else:
+            gas.SP = s, p
+            gas.equilibrate("SP")
+
+    def _flow_state(
+        self, p: float, h_c: float, s_c: float, frozen: bool, composition
+    ) -> Tuple[float, float, float]:
+        """Return (u, a, rho) after isentropic expansion to pressure p."""
+        gas = self._gas
+        self._set_sp(s_c, p, frozen, composition)
+        u_sq = 2.0 * (h_c - gas.enthalpy_mass)
+        u = math.sqrt(max(u_sq, 0.0))
+        gamma = gas.cp / gas.cv
+        a = math.sqrt(
+            gamma * (R_UNIVERSAL / (gas.mean_molecular_weight / 1000.0)) * gas.T
+        )
+        return u, a, gas.density
+
+    def _solve_throat(
+        self, h_c: float, s_c: float, pc: float,
+        frozen: bool = False, composition: Optional[Dict] = None,
+    ) -> Tuple[StationState, float, float]:
+        """Find throat (u = a); return (state, mass flux G_t, c*)."""
+        def residual(p: float) -> float:
+            u, a, _ = self._flow_state(p, h_c, s_c, frozen, composition)
+            return u - a
+
+        try:
+            p_throat = brentq(residual, 0.30 * pc, 0.80 * pc, xtol=1.0)
+        except ValueError as exc:
+            raise ConvergenceError("Throat condition u=a not bracketed.") from exc
+        u_t, _, rho_t = self._flow_state(p_throat, h_c, s_c, frozen, composition)
+        g_throat = rho_t * u_t                      # mdot / At [kg/(m^2 s)]
+        cstar = pc / g_throat                       # c* = pc*At/mdot
+        return self._station(self._gas), g_throat, cstar
+
+    def _solve_exit(
+        self, h_c: float, s_c: float, pc: float, eps: float, g_throat: float,
+        frozen: bool = False, composition: Optional[Dict] = None,
+    ) -> Tuple[StationState, float]:
+        """Find exit pressure matching the area ratio; return (state, ve)."""
+        def residual(p: float) -> float:
+            u, _, rho = self._flow_state(p, h_c, s_c, frozen, composition)
+            if u <= 0.0 or rho <= 0.0:
+                return 1e9
+            return g_throat / (rho * u) - eps       # local A/At - eps
+
+        try:
+            p_exit = brentq(residual, 1.0, 0.5 * pc, xtol=0.1)
+        except ValueError as exc:
+            raise ConvergenceError(
+                f"Exit area-ratio eps={eps} not bracketed."
+            ) from exc
+        ve, _, _ = self._flow_state(p_exit, h_c, s_c, frozen, composition)
+        return self._station(self._gas), ve

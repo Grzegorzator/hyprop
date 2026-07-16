@@ -10,7 +10,10 @@ composition:              # per surrogate molecule
   C: 32
   H: 66
 composition_source: "User's Cantera scripts (07_cantera_punkt0): C32H66 surrogate"
-enthalpy_of_formation: null   # filled at E2 from CEA/Cantera species cards
+enthalpy_of_formation:        # [J/mol] per composition formula unit (C32H66)
+  value: -703.0e+03
+  source: "Group additivity, CH2 increment ~-20.6 kJ/mol from NIST C12H26=-290.7 kJ/mol (user's 07_cantera script)"
+  verify: false
 regression:
   # rdot = a * G^n * L^m ; SI: rdot [m/s], G [kg/(m^2 s)], L [m]
   - oxidizer: n2o
