@@ -98,6 +98,28 @@ Optional extras (not required to run the app):
 | **RocketCEA + MinGW gfortran** | native NASA-CEA backend (Cantera fallback is used otherwise and is validated to <1%) | see RocketCEA docs for Windows |
 | `pip install -e .[opt]` | pymoo (NSGA-II) and SALib (Morris/Sobol sensitivity) | inside `.venv` |
 
+## Install on Linux / macOS
+
+```bash
+# Ubuntu/Debian prerequisites (Fedora: dnf, Arch: pacman):
+sudo apt install python3 python3-venv python3-pip git
+
+git clone https://github.com/Grzegorzator/hyprop.git
+cd hyprop
+./install_linux.sh    # creates .venv and installs all dependencies
+./run_gui.sh          # launches the GUI
+```
+
+If the scripts are not executable after cloning (repository committed
+from Windows), run them via `bash install_linux.sh` / `bash run_gui.sh`
+or restore the bit once: `chmod +x install_linux.sh run_gui.sh`.
+
+Notes: the GUI needs Qt's xcb libraries on minimal desktops
+(`sudo apt install libxcb-cursor0` if the window does not open); for
+PDF reports install TeX Live (`sudo apt install texlive-latex-extra`),
+otherwise a compilable `.tex` is produced. Everything else is identical
+to Windows - same `.venv`, same tests (`.venv/bin/python -m pytest -q`).
+
 ### Install (development, any OS)
 
 ```bash
