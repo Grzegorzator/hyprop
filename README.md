@@ -63,15 +63,47 @@ shifting equilibrium default, frozen reported as lower bound).
   phase delivers 92.4% of impulse in 42.6% of burn time; this is why all
   design modules read the impulse-weighted point, never time averages.
 
-## Install (development)
+## Install on a clean Windows machine (recommended path)
 
-```bash
-pip install -e .[dev]
-pytest
+Only two things must be installed manually; everything else is pulled
+automatically by pip into an isolated virtual environment:
+
+| # | Component | Where | Notes |
+|---|---|---|---|
+| 1 | **Python 3.11-3.14 (64-bit)** | https://python.org | During setup tick **"Add python.exe to PATH"** |
+| 2 | **Git** | https://git-scm.com | Defaults are fine |
+
+Then, in PowerShell or cmd:
+
+```bat
+git clone https://github.com/Grzegorzator/hyprop.git
+cd hyprop
+install_windows.bat   :: creates .venv and installs all dependencies
+run_gui.bat           :: launches the GUI
 ```
 
-Optional extras: `cea` (RocketCEA; needs a Fortran compiler), `cantera`,
-`props` (CoolProp), `opt` (pymoo, SALib), `export`, `gui` (PySide6).
+`install_windows.bat` installs into `.venv` (does not touch the system
+Python): NumPy, SciPy, pandas, matplotlib, Pint, pydantic, PyYAML,
+shapely, **Cantera** (thermochemistry), **CoolProp** (N2O properties,
+HEM/NHNE injector), **PySide6** (GUI), openpyxl/jinja2 (exports) and
+pytest. First simulation run builds the CEA table (~20-30 s); later
+runs are cached. Verify the installation with
+`.venv\Scripts\python -m pytest -q` (125 tests).
+
+Optional extras (not required to run the app):
+
+| Component | Enables | How |
+|---|---|---|
+| **MiKTeX** (https://miktex.org) | automatic PDF compilation of design reports (otherwise a `.tex` file is produced - compile anywhere) | install, first run auto-fetches packages |
+| **RocketCEA + MinGW gfortran** | native NASA-CEA backend (Cantera fallback is used otherwise and is validated to <1%) | see RocketCEA docs for Windows |
+| `pip install -e .[opt]` | pymoo (NSGA-II) and SALib (Morris/Sobol sensitivity) | inside `.venv` |
+
+### Install (development, any OS)
+
+```bash
+pip install -e .[dev,gui,cantera,props,export]
+pytest
+```
 
 ## Quick start
 
