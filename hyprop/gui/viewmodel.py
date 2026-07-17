@@ -138,10 +138,14 @@ class SessionViewModel:
         node = self.raw
         for key in keys[:-1]:
             node = node.setdefault(key, {})
-        try:
-            value: Any = float(text)
-        except ValueError:
-            value = text
+        text = text.strip() if isinstance(text, str) else text
+        if text == "":                      # empty widget = optional field
+            value: Any = None               # -> use the database default
+        else:
+            try:
+                value = float(text)
+            except (TypeError, ValueError):
+                value = text
         node[keys[-1]] = value
 
     def validate(self) -> Optional[str]:
@@ -176,12 +180,12 @@ class SessionViewModel:
     def set_display(self, path: str, text: str) -> None:
         """Set a field from display-unit text (converted back to SI)."""
         units = DISPLAY_UNITS.get(path)
-        if units is None or self.unit_system == "si":
+        if units is None or self.unit_system == "si" or not str(text).strip():
             self.set(path, text)
             return
         try:
             value = float(text)
-        except ValueError:
+        except (TypeError, ValueError):
             self.set(path, text)
             return
         from hyprop.core.units import Q_
@@ -213,6 +217,40 @@ class SessionViewModel:
                              rop=self.rop)
 
     def report(self, path):
+        from pathlib import Path
+
         from hyprop.export import generate_report
 
-        return generate_report(self.config(), self.result, self.rop, path)
+        figures = []
+        try:
+            figures.append(self._render_report_figure(
+                Path(path).with_suffix("").parent
+                / (Path(path).stem + "_plots.png")))
+        except Exception:                              # noqa: BLE001
+            _log.warning("Report figure rendering failed; report without "
+                         "figures.", exc_info=True)
+        return generate_report(self.config(), self.result, self.rop, path,
+                               figures=figures)
+
+    def _render_report_figure(self, png_path):
+        """Standard 4-panel plot (as the Results tab) saved for the report."""
+        import matplotlib
+        matplotlib.use("Agg")
+        from matplotlib.figure import Figure
+
+        df = self.result.history.to_dataframe()
+        lro = self.result.event_time("liquid_runout")
+        figure = Figure(figsize=(10, 6))
+        panels = (("thrust", "Thrust [N]", 1.0), ("pc", "Pc [bar]", 1e5),
+                  ("of", "O/F [-]", 1.0), ("impulse", "It [Ns]", 1.0))
+        for position, (column, title, scale) in enumerate(panels):
+            axes = figure.add_subplot(2, 2, position + 1)
+            axes.plot(df.t, df[column] / scale)
+            if lro:
+                axes.axvline(lro, ls="--", color="r", alpha=0.6)
+            axes.set_title(title); axes.grid(alpha=0.3)
+            axes.set_xlabel("t [s]")
+        figure.tight_layout()
+        png_path.parent.mkdir(parents=True, exist_ok=True)
+        figure.savefig(png_path, dpi=130)
+        return png_path

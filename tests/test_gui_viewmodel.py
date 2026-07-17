@@ -105,3 +105,15 @@ def test_unit_system_display_roundtrip(vm):
     vm.set_unit_system("si")
     with pytest.raises(ValueError):
         vm.set_unit_system("banany")
+
+
+def test_empty_field_means_none_not_empty_string(vm):
+    """Regression: blank QLineEdit used to inject '' and break pydantic
+    unit parsing ("Cannot parse quantity ''")."""
+    vm.set("fuel.density_kg_m3", "")
+    assert vm.get("fuel.density_kg_m3") is None
+    assert vm.validate() is None                    # config still valid
+    vm.set_unit_system("metric")
+    vm.set_display("fuel.density_kg_m3", "  ")      # whitespace only
+    assert vm.get("fuel.density_kg_m3") is None
+    vm.set_unit_system("si")

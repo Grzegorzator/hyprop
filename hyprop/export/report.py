@@ -46,10 +46,71 @@ def _fmt(value, digits=3):
         return str(value)
 
 
-def _df_to_tabular(df, caption: str, digits=4) -> str:
-    body = df.round(digits).to_latex(escape=True)
-    return (f"\\begin{{table}}[h!]\\centering\\caption{{{caption}}}\n"
-            f"\\resizebox{{\\textwidth}}{{!}}{{%\n{body}}}\\end{{table}}\n")
+def _tex_escape(text: str) -> str:
+    return (str(text).replace("_", r"\_").replace("%", r"\%")
+            .replace("&", r"\&").replace("#", r"\#"))
+
+
+def _num(value) -> str:
+    try:
+        return f"{float(value):.4g}"
+    except (TypeError, ValueError):
+        return _tex_escape(value)
+
+
+def _df_to_tabular(df, caption: str) -> str:
+    """Hand-rolled booktabs table (no pandas Styler / jinja2 needed)."""
+    columns = list(df.columns)
+    header = " & ".join([_tex_escape(df.index.name or "")]
+                        + [_tex_escape(c) for c in columns])
+    lines = [header + r" \\", r"\midrule"]
+    for index, row in df.iterrows():
+        cells = [_tex_escape(index)] + [_num(row[c]) for c in columns]
+        lines.append(" & ".join(cells) + r" \\")
+    body = "\n".join(lines)
+    spec = "l" + "r" * len(columns)
+    return (f"\\begin{{table}}[h!]\\centering\\small\n"
+            f"\\caption{{{caption}}}\n"
+            f"\\begin{{tabular}}{{{spec}}}\\toprule\n{body}\n"
+            f"\\bottomrule\\end{{tabular}}\\end{{table}}\n")
+
+
+#: Channels shown in the ROP comparison table (full data goes to XLSX).
+_ROP_ROWS = (("thrust", "F [N]", 1.0), ("pc", "Pc [bar]", 1e-5),
+             ("of", "O/F [-]", 1.0), ("isp", "Isp [s]", 1.0),
+             ("cstar", "c* [m/s]", 1.0), ("t_c", "Tc [K]", 1.0),
+             ("mdot_ox", "mdot_ox [kg/s]", 1.0),
+             ("mdot_fuel", "mdot_f [kg/s]", 1.0))
+
+
+def _rop_compact(rop) -> "object":
+    """Key channels x points (transposed: fits an A4 page)."""
+    import pandas as pd
+
+    full = rop.comparison_table()
+    out = {}
+    for column in full.index:                     # point names
+        out[column] = {
+            label: full.loc[column, ch] * scale
+            for ch, label, scale in _ROP_ROWS if ch in full.columns
+        }
+    frame = pd.DataFrame(out)
+    frame.index.name = "channel"
+    return frame
+
+
+def _phases_compact(rop) -> "object":
+    frame = rop.phases_table().set_index("phase")
+    frame = frame[["t_start_s", "t_end_s", "impulse_ns", "impulse_share",
+                   "time_share", "mean_thrust", "mean_pc", "mean_of"]]
+    frame = frame.rename(columns={
+        "t_start_s": "t0 [s]", "t_end_s": "t1 [s]",
+        "impulse_ns": "It [Ns]", "impulse_share": "It share",
+        "time_share": "t share", "mean_thrust": "F [N]",
+        "mean_of": "O/F"})
+    frame["mean_pc"] = frame["mean_pc"] * 1e-5
+    frame = frame.rename(columns={"mean_pc": "Pc [bar]"})
+    return frame
 
 
 def generate_report(
@@ -115,9 +176,10 @@ def generate_report(
         f"by {100*(1-ta['pc']/iw['pc']):.0f}\\% versus the impulse-weighted "
         "point. All design modules therefore use the weighted points "
         "below.\n")
-    add(_df_to_tabular(rop.comparison_table(), "Representative operating "
-        "points vs plain time average (SI units)."))
-    add(_df_to_tabular(rop.phases_table().set_index("phase"),
+    add(_df_to_tabular(_rop_compact(rop), "Representative operating "
+        "points vs plain time average (key channels; full data in the "
+        "XLSX export)."))
+    add(_df_to_tabular(_phases_compact(rop),
                        "Burn phases: liquid / transition / gas."))
     add("Time share needed to deliver impulse fractions: "
         + ", ".join(f"{f:.0%} of $I_t$ in {v:.1%} of burn time"
@@ -141,10 +203,20 @@ def generate_report(
         f"$c^*$ {_fmt(iw['cstar'])} m/s, O/F {_fmt(iw['of'])}.\n")
 
     if figures:
-        add(r"\section{Figures}" "\n")
+        added_any = False
         for figure in figures:
+            source = Path(figure)
+            if not source.exists():
+                _log.warning("Figure missing, skipped: %s", source)
+                continue
+            target = path.parent / source.name
+            if source.resolve() != target.resolve():
+                shutil.copy(source, target)     # pdflatex needs it locally
+            if not added_any:
+                add(r"\section{Figures}" "\n")
+                added_any = True
             add(f"\\includegraphics[width=\\textwidth]"
-                f"{{{Path(figure).name}}}\n")
+                f"{{{source.name}}}\n\n")
 
     add(r"\section{Validation Note}" "\n"
         "Models validated against NASA-CEA-class thermochemistry "

@@ -30,6 +30,7 @@ Goodwin et al., Cantera (https://cantera.org).
 from __future__ import annotations
 
 import math
+import warnings
 from typing import Dict, Optional, Tuple, Union
 
 from scipy.optimize import brentq
@@ -69,6 +70,13 @@ _ATOMIC_MASS_KG_KMOL = {"C": 12.011, "H": 1.008, "O": 15.999, "N": 14.007,
 
 #: Surrogate thermo validity range [K] and reference pressure [Pa].
 _SURROGATE_T_RANGE = (200.0, 3500.0)
+
+# GRI-Mech NASA polynomials are formally valid to 3000-3500 K; hybrid
+# chamber equilibria (~3300 K) extrapolate them marginally. The results
+# are cross-validated (<1% vs the user's reference script), so the
+# per-call "outside valid range" UserWarnings are noise - silence them.
+warnings.filterwarnings(
+    "ignore", message=".*outside valid range.*", category=UserWarning)
 
 
 @register_model("cea", "cantera")

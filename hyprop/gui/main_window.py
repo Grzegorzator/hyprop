@@ -127,6 +127,7 @@ class MainWindow(QMainWindow):
         self.status.setText(f"Units: {system}")
 
     def _refresh_fields(self) -> None:
+        self._update_placeholders()
         for path, widget in self._fields.items():
             if isinstance(widget, QComboBox):
                 continue
@@ -141,10 +142,31 @@ class MainWindow(QMainWindow):
                 row_label.setText(
                     f"{label} [{self.vm.display_unit(path, unit)}]")
 
+    def _update_placeholders(self) -> None:
+        """Grey hints for optional fields: show the database default that
+        applies when the field is left empty (override semantics)."""
+        density_edit = self._fields.get("fuel.density_kg_m3")
+        if density_edit is None or isinstance(density_edit, QComboBox):
+            return
+        try:
+            from hyprop.data import load_fuel
+
+            fuel_name = str(self.vm.get("fuel.name"))
+            rho_si = load_fuel(fuel_name).density.value
+            from hyprop.core.units import Q_
+            unit = self.vm.display_unit("fuel.density_kg_m3", "kg/m^3")
+            rho = Q_(rho_si, "kg/m^3").to(unit).magnitude
+            density_edit.setPlaceholderText(
+                f"database default: {rho:g} {unit}")
+        except Exception:                              # noqa: BLE001
+            density_edit.setPlaceholderText("database default")
+
     def _on_choice(self, path: str, text: str, combo) -> None:
         """Fuel/oxidizer combo change; 'custom...' opens a material card."""
         if text != _CUSTOM_ITEM:
             self.vm.set(path, text)
+            if path == "fuel.name":
+                self._update_placeholders()
             return
         from hyprop.gui.material_card import open_material_card
 
