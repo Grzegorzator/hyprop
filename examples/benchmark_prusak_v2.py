@@ -11,6 +11,9 @@ CSV-implied a = 1.040e-4 SI confirms our HRAP unit conversion.
 import math, sys
 sys.path.insert(0, '.')
 import numpy as np, pandas as pd
+#: NumPy 2.x renamed trapz -> trapezoid; support both.
+_trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
+
 import hyprop.api as api
 from hyprop.core.config import EngineConfig
 
@@ -60,11 +63,11 @@ def main():
 
     def dev(a, b): return float(np.mean(np.abs(a-b)) / np.mean(np.abs(b)))
     lro_h = lro
-    it_r = float(np.trapz(ref["Thrust (N)"], ref["Time (s)"]))
+    it_r = float(_trapz(ref["Thrust (N)"], ref["Time (s)"]))
     mask_r = ref["Time (s)"] <= 7.0
     mask_h = df.t <= lro
-    it_r_liq = float(np.trapz(ref.loc[mask_r, "Thrust (N)"], ref.loc[mask_r, "Time (s)"]))
-    it_h_liq = float(np.trapz(df.loc[mask_h, "thrust"], df.loc[mask_h, "t"]))
+    it_r_liq = float(_trapz(ref.loc[mask_r, "Thrust (N)"], ref.loc[mask_r, "Time (s)"]))
+    it_h_liq = float(_trapz(df.loc[mask_h, "thrust"], df.loc[mask_h, "t"]))
     print(f"Liquid-phase impulse: HyProp {it_h_liq:.0f} vs HRAP {it_r_liq:.0f} Ns "
           f"({100*(it_h_liq/it_r_liq-1):+.1f}%)")
 

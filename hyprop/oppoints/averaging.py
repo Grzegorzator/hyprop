@@ -24,6 +24,9 @@ from __future__ import annotations
 from typing import Callable, Dict, Union
 
 import numpy as np
+#: NumPy 2.x renamed trapz -> trapezoid; support both.
+_trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
+
 
 from hyprop.core.state import TimeHistory
 
@@ -66,8 +69,8 @@ def weighted_average(
     t = history["t"]
     x = history[channel]
     w = weight_array(history, weighting)
-    denominator = np.trapz(w, t)
-    return float(np.trapz(x * w, t) / denominator)
+    denominator = _trapz(w, t)
+    return float(_trapz(x * w, t) / denominator)
 
 
 def averages_all_channels(

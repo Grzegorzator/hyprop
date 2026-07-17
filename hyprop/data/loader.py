@@ -10,7 +10,7 @@ confirmation against primary literature or fire tests.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -18,6 +18,18 @@ from pydantic import BaseModel, ConfigDict, Field
 from hyprop.core.exceptions import DataError
 
 _DATA_DIR = Path(__file__).parent
+
+#: User-database fallback (custom cards from the GUI); cwd-relative.
+_USER_DIR = Path("database")
+
+
+def _find(kind: str, name: str) -> Path:
+    """Package data first, then the user database directory."""
+    for base in (_DATA_DIR, _USER_DIR):
+        path = base / kind / f"{name.lower()}.yaml"
+        if path.exists():
+            return path
+    return _DATA_DIR / kind / f"{name.lower()}.yaml"   # -> DataError
 
 
 class _Model(BaseModel):
@@ -78,7 +90,7 @@ class OxidizerData(_Model):
     phase_at_storage: str
     property_backends: List[str] = Field(default_factory=list)
     reference_density: Optional[SourcedValue] = None
-    parameters: Dict[str, float] = Field(default_factory=dict)
+    parameters: Dict[str, Any] = Field(default_factory=dict)
     notes: str = ""
 
 
@@ -94,7 +106,7 @@ def _load_yaml(path: Path) -> dict:
 
 def load_fuel(name: str) -> FuelData:
     """Load and validate a fuel by database name (e.g. ``'hdpe'``)."""
-    path = _DATA_DIR / "fuels" / f"{name.lower()}.yaml"
+    path = _find("fuels", name)
     try:
         return FuelData.model_validate(_load_yaml(path))
     except ValueError as exc:
@@ -103,18 +115,25 @@ def load_fuel(name: str) -> FuelData:
 
 def load_oxidizer(name: str) -> OxidizerData:
     """Load and validate an oxidizer by database name (e.g. ``'n2o'``)."""
-    path = _DATA_DIR / "oxidizers" / f"{name.lower()}.yaml"
+    path = _find("oxidizers", name)
     try:
         return OxidizerData.model_validate(_load_yaml(path))
     except ValueError as exc:
         raise DataError(f"Invalid oxidizer entry '{name}': {exc}") from exc
 
 
+def _list(kind: str) -> List[str]:
+    names = {p.stem for p in (_DATA_DIR / kind).glob("*.yaml")}
+    if (_USER_DIR / kind).is_dir():
+        names |= {p.stem for p in (_USER_DIR / kind).glob("*.yaml")}
+    return sorted(names)
+
+
 def list_fuels() -> List[str]:
-    """Names of all built-in fuels."""
-    return sorted(p.stem for p in (_DATA_DIR / "fuels").glob("*.yaml"))
+    """Names of all fuels (built-in + user database)."""
+    return _list("fuels")
 
 
 def list_oxidizers() -> List[str]:
-    """Names of all built-in oxidizers."""
-    return sorted(p.stem for p in (_DATA_DIR / "oxidizers").glob("*.yaml"))
+    """Names of all oxidizers (built-in + user database)."""
+    return _list("oxidizers")

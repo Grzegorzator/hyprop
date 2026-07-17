@@ -17,6 +17,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 import numpy as np
+#: NumPy 2.x renamed trapz -> trapezoid; support both.
+_trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
+
 
 from hyprop.core.state import TimeHistory
 
@@ -48,7 +51,7 @@ def _phase_stats(history: TimeHistory, mask: np.ndarray, name: str,
                           0.0, 0.0, 0.0)
     thrust = history["thrust"][mask]
     t_phase = t[mask]
-    impulse = float(np.trapz(thrust, t_phase))
+    impulse = float(_trapz(thrust, t_phase))
     means = {
         channel: float(history[channel][mask].mean())
         for channel in _MEAN_CHANNELS if channel in history.channels
@@ -68,7 +71,7 @@ def split_phases(
 ) -> List[PhaseStats]:
     """Segment the burn into liquid / transition / gas phases."""
     t = history["t"]
-    impulse_total = float(np.trapz(history["thrust"], t))
+    impulse_total = float(_trapz(history["thrust"], t))
     burn_time = float(t[-1] - t[0])
 
     if lro_time_s is None:                       # never left liquid phase

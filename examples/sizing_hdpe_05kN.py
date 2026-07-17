@@ -1,12 +1,15 @@
 """Preliminary sizing run: HDPE/N2O, 0.5 kN, Itot ~ 4000 Ns (E6 demo)."""
 import sys; sys.path.insert(0, '.')
 import numpy as np
+#: NumPy 2.x renamed trapz -> trapezoid; support both.
+_trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
+
 import hyprop.api as api
 
 result = api.run(api.load_config("examples/hdpe_05kN.yaml"))
 h, s = result.history, result.summary
 lro = result.event_time("liquid_runout"); liq = h["t"] <= lro
-print(f"It={s['total_impulse_ns']:.0f} Ns (liquid {np.trapz(h['thrust'][liq], h['t'][liq]):.0f})")
+print(f"It={s['total_impulse_ns']:.0f} Ns (liquid {_trapz(h['thrust'][liq], h['t'][liq]):.0f})")
 print(f"F_peak={s['peak_thrust_n']:.0f} N, F_mean_liq={h['thrust'][liq].mean():.0f} N")
 print(f"Pc_peak={s['peak_pc_pa']/1e5:.1f} bar, LRO={lro:.2f} s, Isp={s['isp_mean_s']:.0f} s")
 
