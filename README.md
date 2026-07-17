@@ -82,6 +82,10 @@ install_windows.bat   :: creates .venv and installs all dependencies
 run_gui.bat           :: launches the GUI
 ```
 
+PowerShell note: scripts in the current directory need the `.\` prefix
+(`.\install_windows.bat`, `.\run_gui.bat`); plain `cmd` and
+double-click in Explorer work without it.
+
 `install_windows.bat` installs into `.venv` (does not touch the system
 Python): NumPy, SciPy, pandas, matplotlib, Pint, pydantic, PyYAML,
 shapely, **Cantera** (thermochemistry), **CoolProp** (N2O properties,

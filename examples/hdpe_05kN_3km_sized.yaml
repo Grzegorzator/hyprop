@@ -8,6 +8,7 @@ mission:
   ambient_pressure_pa: 101325.0
   min_isp_s: null
   safety_factor: 1.5
+  apogee_m: 3000.0
 oxidizer:
   name: n2o
   temperature_k: 293.15

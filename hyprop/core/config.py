@@ -57,7 +57,12 @@ class MissionRequirements(_Model):
         None, description="Required burn time [s]"
     )
     design_altitude_m: QuantityField = Field(
-        0.0, description="Design altitude for nozzle adaptation [m]"
+        0.0, description="Nozzle adaptation altitude [m] (NOT the apogee; "
+        "for an ascent the optimum is a fraction of the apogee)"
+    )
+    apogee_m: Optional[QuantityField] = Field(
+        None, description="Mission apogee target [m] (informational; used "
+        "by sizing to pick the adaptation altitude)"
     )
     ambient_pressure_pa: Optional[QuantityField] = Field(
         None,
@@ -75,6 +80,7 @@ class MissionRequirements(_Model):
     _v_it = field_validator("total_impulse_ns", mode="before")(_unit_validator("N*s"))
     _v_tb = field_validator("burn_time_s", mode="before")(_unit_validator("s"))
     _v_h = field_validator("design_altitude_m", mode="before")(_unit_validator("m"))
+    _v_ap = field_validator("apogee_m", mode="before")(_unit_validator("m"))
     _v_pa = field_validator("ambient_pressure_pa", mode="before")(_unit_validator("Pa"))
     _v_isp = field_validator("min_isp_s", mode="before")(_unit_validator("s"))
 

@@ -83,6 +83,24 @@ _ROP_ROWS = (("thrust", "F [N]", 1.0), ("pc", "Pc [bar]", 1e-5),
              ("mdot_fuel", "mdot_f [kg/s]", 1.0))
 
 
+#: Short column headers for the ROP table (page-width friendly).
+_POINT_LABELS = {"peak_performance": "peak", "impulse_weighted": "imp-wtd",
+                 "heat_load": "heat", "mass_flow": "mdot-wtd",
+                 "median_impulse": "median", "time_average": "time-avg"}
+
+
+def _port_text(port: dict) -> str:
+    """Human-readable port parameters (mm where applicable)."""
+    parts = []
+    for key, value in port.items():
+        label = _tex_escape(key.replace("_m", "").replace("_", " "))
+        if isinstance(value, (int, float)) and key.endswith("_m"):
+            parts.append(f"{label} {value*1e3:.1f} mm")
+        else:
+            parts.append(f"{label} {_tex_escape(value)}")
+    return "; ".join(parts) if parts else "none"
+
+
 def _rop_compact(rop) -> "object":
     """Key channels x points (transposed: fits an A4 page)."""
     import pandas as pd
@@ -90,7 +108,7 @@ def _rop_compact(rop) -> "object":
     full = rop.comparison_table()
     out = {}
     for column in full.index:                     # point names
-        out[column] = {
+        out[_POINT_LABELS.get(column, column)] = {
             label: full.loc[column, ch] * scale
             for ch, label, scale in _ROP_ROWS if ch in full.columns
         }
@@ -131,10 +149,16 @@ def generate_report(
     parts = [_PREAMBLE % dict(title=config.name.replace("_", r"\_"))]
     add = parts.append
 
+    apogee_txt = ("" if config.mission.apogee_m is None else
+                  f"mission apogee target: {_fmt(config.mission.apogee_m)} m; ")
     add(r"\section{Mission Requirements}" "\n"
         f"Required thrust: {_fmt(config.mission.thrust_n)} N; "
         f"total impulse: {_fmt(config.mission.total_impulse_ns)} N\\,s; "
-        f"design altitude: {_fmt(config.mission.design_altitude_m)} m; "
+        f"{apogee_txt}"
+        f"nozzle adaptation altitude: "
+        f"{_fmt(config.mission.design_altitude_m)} m "
+        "(single fixed nozzle: optimum expansion is set at a fraction of "
+        "the apogee, not at the apogee itself); "
         f"safety factor: {config.mission.safety_factor}.\n")
 
     add(r"\section{Inputs and Assumptions}" "\n"
@@ -155,7 +179,7 @@ def generate_report(
         f"Geometry: {config.grain.geometry}; length "
         f"{_fmt(config.grain.length_m*1e3)} mm; outer diameter "
         f"{_fmt(config.grain.outer_diameter_m*1e3)} mm; port parameters: "
-        f"{config.grain.port}. Tank: "
+        f"{_port_text(config.grain.port)}. Tank: "
         f"{_fmt((config.tank.volume_m3 or 0)*1e3)} L, "
         f"{_fmt(config.tank.oxidizer_mass_kg)} kg oxidizer.\n")
 
@@ -182,7 +206,8 @@ def generate_report(
     add(_df_to_tabular(_phases_compact(rop),
                        "Burn phases: liquid / transition / gas."))
     add("Time share needed to deliver impulse fractions: "
-        + ", ".join(f"{f:.0%} of $I_t$ in {v:.1%} of burn time"
+        + ", ".join(f"{f*100:.0f}\\% of $I_t$ in {v*100:.1f}\\% "
+                    "of burn time"
                     for f, v in rop.time_shares.items()) + ".\n")
     add(r"\subsection{Recommendations}\begin{itemize}" "\n"
         r"\item Nozzle design and reported performance: "

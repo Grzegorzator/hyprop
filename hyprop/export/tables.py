@@ -48,12 +48,14 @@ def export_result(
             path = directory / f"{stem}.xlsx"
             import pandas as pd
 
+            # sheet_name is keyword-only in newer pandas (3.x)
             with pd.ExcelWriter(path) as writer:
-                history.to_excel(writer, "history", index=False)
+                history.to_excel(writer, sheet_name="history", index=False)
                 if rop is not None:
-                    rop.comparison_table().to_excel(writer, "rop_points")
-                    rop.phases_table().to_excel(writer, "phases",
-                                                index=False)
+                    rop.comparison_table().to_excel(
+                        writer, sheet_name="rop_points")
+                    rop.phases_table().to_excel(
+                        writer, sheet_name="phases", index=False)
             written.append(path)
     if rop is not None and "csv" in formats:
         path = directory / f"{stem}_rop_points.csv"

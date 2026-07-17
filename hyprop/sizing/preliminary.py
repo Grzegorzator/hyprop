@@ -144,6 +144,7 @@ def size_engine(
                          total_impulse_ns=total_impulse_ns,
                          burn_time_s=burn_time,
                          design_altitude_m=h_design,
+                         apogee_m=apogee_m,
                          ambient_pressure_pa=atmosphere.pressure(0.0)),
             oxidizer=dict(name=oxidizer, temperature_k=temperature_k),
             fuel=dict(name=fuel),
