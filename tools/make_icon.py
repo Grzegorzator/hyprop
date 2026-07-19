@@ -59,6 +59,11 @@ def build(src: Path, dst: Path) -> Path:
 
     dst.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(dst, format="ICO", sizes=SIZES)
+
+    # Qt's ICO reader chokes on the PNG-compressed 256x256 entry that Pillow
+    # writes, which leaves the taskbar showing the generic Python icon. A plain
+    # PNG is read reliably, so emit one for QIcon and keep the ICO for Explorer.
+    canvas.resize((256, 256), Image.LANCZOS).save(dst.with_name("hyprop_256.png"))
     return dst
 
 

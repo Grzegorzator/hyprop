@@ -14,13 +14,21 @@ APP_ID = "MELprop.HyProp.GUI.1"
 ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 
 
-def _icon_path() -> Path | None:
-    """Return the first existing application icon file, or ``None``."""
-    for name in ("hyprop.ico", "melprop_logo.png"):
+def _app_icon():
+    """Build the application :class:`QIcon` from every asset that exists.
+
+    PNG first: Qt's ICO reader silently fails on the PNG-compressed 256x256
+    entry Pillow writes, which is why the taskbar fell back to the generic
+    Python icon. The ICO is still added so Qt can pick a crisp small size.
+    """
+    from PySide6.QtGui import QIcon
+
+    icon = QIcon()
+    for name in ("hyprop_256.png", "hyprop.ico", "melprop_logo.png"):
         candidate = ASSETS_DIR / name
         if candidate.is_file():
-            return candidate
-    return None
+            icon.addFile(str(candidate))
+    return icon if not icon.isNull() else None
 
 
 def main() -> int:
@@ -41,10 +49,14 @@ def main() -> int:
             pass
 
     app = QApplication(sys.argv)
-    icon_file = _icon_path()
-    if icon_file is not None:
-        app.setWindowIcon(QIcon(str(icon_file)))
+    icon = _app_icon()
+    if icon is not None:
+        app.setWindowIcon(icon)
     window = MainWindow()
+    if icon is not None:
+        # Explicit per-window icon: on Windows the taskbar button reads the
+        # window icon, which does not always inherit the application default.
+        window.setWindowIcon(icon)
     window.show()
     return app.exec()
 
