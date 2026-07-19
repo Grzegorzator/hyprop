@@ -1,0 +1,17 @@
+# Normalizacja koncow linii: w repo zawsze LF, u uzytkownika Windows CRLF.
+# Bez tego kazdy plik tekstowy pokazuje sie jako zmieniony przy pracy
+# rownoleglej z Windows i Linuksa (135 plikow "zmodyfikowanych" bez powodu).
+* text=auto
+
+# Skrypty Windows musza miec CRLF, inaczej cmd.exe potrafi sie zakrztusic.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Skrypty Linux zawsze LF.
+*.sh text eol=lf
+
+# Pliki binarne - bez konwersji.
+*.png binary
+*.ico binary
+*.pdf binary
+*.xlsx binary
