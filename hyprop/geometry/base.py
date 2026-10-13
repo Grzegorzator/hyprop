@@ -20,7 +20,7 @@ geometry concepts).
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
 
 from hyprop.core.exceptions import ConfigError
 
@@ -94,7 +94,7 @@ class GrainGeometry(ABC):
     # ----------------------------------------------------- construction
     @classmethod
     def from_spec(
-        cls, length_m: float, outer_diameter_m: float, port: Dict[str, Any]
-    ) -> "GrainGeometry":
+        cls, length_m: float, outer_diameter_m: float, port: dict[str, Any]
+    ) -> GrainGeometry:
         """Build from ``GrainSpec`` fields; subclasses define ``port`` keys."""
         return cls(length_m, outer_diameter_m, **port)

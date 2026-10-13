@@ -4,9 +4,9 @@ Validation suite for HyProp, kept separate from `tests/` (unit tests).
 It regenerates `docs/VALIDATION.md` with one command, run from the repo root:
 
 ```bash
-pip install -e .[dev,cantera,props,export,validation] rocketcea   # rocketcea needs gfortran
+uv sync --extra cantera --extra props --extra export --extra validation --extra cea  # cea = RocketCEA, needs gfortran
 export HYPROP_HRAP_DIR=/path/to/HRAP/application            # contains output/ and propellant_configs/
-python -m validation.run_all
+uv run python -m validation.run_all
 ```
 
 | Variable | File(s) used | Used for |

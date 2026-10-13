@@ -3,8 +3,8 @@
 from hyprop.tank.base import FluidState, TankModel, TankState
 from hyprop.tank.equilibrium_blowdown import EquilibriumBlowdownTank
 from hyprop.tank.n2o_properties import (
-    CoolPropN2O,
     ESDU91022,
+    CoolPropN2O,
     get_n2o_properties,
 )
 from hyprop.tank.simple_models import ConstantMdotTank, PressureFedTank

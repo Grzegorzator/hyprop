@@ -48,9 +48,7 @@ class MultiportGrain(GrainGeometry):
         self.bolt_circle_radius_m = 0.5 * bolt_circle_diameter_m
         self.central_port_diameter_m = central_port_diameter_m
         if self._initial_min_web() <= 0.0:
-            raise ConfigError(
-                "Initial multiport layout has overlapping ports/walls."
-            )
+            raise ConfigError("Initial multiport layout has overlapping ports/walls.")
 
     # ------------------------------------------------------------ helpers
     def _radius(self, w: float) -> float:
@@ -69,12 +67,14 @@ class MultiportGrain(GrainGeometry):
 
     # ---------------------------------------------------------- interface
     def port_area(self, w: float) -> float:
+        """Total port cross-section area [m^2] after web burn ``w`` [m]."""
         area = self.port_count * math.pi * self._radius(w) ** 2
         if self._has_central():
             area += math.pi * self._central_radius(w) ** 2
         return area
 
     def burn_perimeter(self, w: float) -> float:
+        """Burning perimeter [m] after web burn ``w`` [m]."""
         if self.is_burned_out(w):
             return 0.0
         perimeter = self.port_count * 2.0 * math.pi * self._radius(w)
@@ -83,17 +83,12 @@ class MultiportGrain(GrainGeometry):
         return perimeter
 
     def web_remaining(self, w: float) -> float:
+        """Remaining web thickness [m] after web burn ``w`` [m]."""
         radius = self._radius(w)
-        chord = 2.0 * self.bolt_circle_radius_m * math.sin(
-            math.pi / self.port_count
-        )
+        chord = 2.0 * self.bolt_circle_radius_m * math.sin(math.pi / self.port_count)
         web_port_port = chord - 2.0 * radius
-        web_port_wall = (
-            0.5 * self.outer_diameter_m - self.bolt_circle_radius_m - radius
-        )
+        web_port_wall = 0.5 * self.outer_diameter_m - self.bolt_circle_radius_m - radius
         webs = [web_port_port, web_port_wall]
         if self._has_central():
-            webs.append(
-                self.bolt_circle_radius_m - radius - self._central_radius(w)
-            )
+            webs.append(self.bolt_circle_radius_m - radius - self._central_radius(w))
         return min(webs)

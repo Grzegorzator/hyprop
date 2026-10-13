@@ -30,18 +30,14 @@ def test_area_ratio_at_sonic_is_unity():
 def test_mach_area_roundtrip(mach, gamma):
     branch = "supersonic" if mach > 1.0 else "subsonic"
     ratio = cf.area_ratio(mach, gamma)
-    assert cf.mach_from_area_ratio(ratio, gamma, branch) == pytest.approx(
-        mach, rel=1e-9
-    )
+    assert cf.mach_from_area_ratio(ratio, gamma, branch) == pytest.approx(mach, rel=1e-9)
 
 
 def test_mach_pressure_roundtrip():
     gamma = 1.22
     mach = 2.7
     p_ratio = cf.pressure_ratio(mach, gamma)
-    assert cf.mach_from_pressure_ratio(p_ratio, gamma) == pytest.approx(
-        mach, rel=1e-12
-    )
+    assert cf.mach_from_pressure_ratio(p_ratio, gamma) == pytest.approx(mach, rel=1e-12)
 
 
 def test_cstar_and_choked_flux_are_consistent():
@@ -55,9 +51,7 @@ def test_cstar_and_choked_flux_are_consistent():
 def test_optimum_expansion_roundtrip():
     gamma = 1.25
     eps = cf.optimum_expansion_ratio(p0_over_pe=35.0, gamma=gamma)
-    assert 1.0 / cf.exit_pressure_ratio(eps, gamma) == pytest.approx(
-        35.0, rel=1e-9
-    )
+    assert 1.0 / cf.exit_pressure_ratio(eps, gamma) == pytest.approx(35.0, rel=1e-9)
 
 
 def test_thrust_coefficient_matched_sutton():

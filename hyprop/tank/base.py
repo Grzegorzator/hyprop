@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -26,8 +25,8 @@ class FluidState:
     vapor_pressure_pa: float
     #: 'liquid' | 'vapor' - what currently leaves the tank.
     phase: str = "liquid"
-    enthalpy_j_kg: Optional[float] = None
-    entropy_j_kg_k: Optional[float] = None
+    enthalpy_j_kg: float | None = None
+    entropy_j_kg_k: float | None = None
 
 
 @dataclass(frozen=True)
@@ -43,6 +42,7 @@ class TankState:
 
     @property
     def mass_total_kg(self) -> float:
+        """Liquid + vapour mass [kg]."""
         return self.mass_liquid_kg + self.mass_vapor_kg
 
     @property
@@ -52,6 +52,7 @@ class TankState:
 
     @property
     def empty(self) -> bool:
+        """True when no oxidizer is left."""
         return self.mass_total_kg <= 0.0
 
 

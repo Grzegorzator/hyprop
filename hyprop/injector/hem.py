@@ -37,15 +37,14 @@ class HEMInjector(InjectorModel):
 
     def __init__(self, discharge_coefficient, orifice_count, orifice_area_m2):
         super().__init__(discharge_coefficient, orifice_count, orifice_area_m2)
-        self._props = CoolPropN2O()          # raises if CoolProp missing
+        self._props = CoolPropN2O()  # raises if CoolProp missing
 
     def mdot(self, upstream: FluidState, p_chamber_pa: float) -> float:
+        """Oxidizer mass flow [kg/s], homogeneous equilibrium model (CoolProp)."""
         if self._dp(upstream, p_chamber_pa) <= 0.0:
             return 0.0
         h1, s1 = self._upstream_hs(upstream)
-        p_grid = np.linspace(
-            max(p_chamber_pa, 1e4), upstream.pressure_pa * 0.999, _SCAN_POINTS
-        )
+        p_grid = np.linspace(max(p_chamber_pa, 1e4), upstream.pressure_pa * 0.999, _SCAN_POINTS)
         g_max = 0.0
         for pressure in p_grid:
             rho, h = self._props.state_ps(float(pressure), s1)
@@ -56,13 +55,10 @@ class HEMInjector(InjectorModel):
         return self.cd * self.total_area_m2 * g_max
 
     def _upstream_hs(self, upstream: FluidState):
-        if upstream.enthalpy_j_kg is not None and \
-                upstream.entropy_j_kg_k is not None:
+        if upstream.enthalpy_j_kg is not None and upstream.entropy_j_kg_k is not None:
             return upstream.enthalpy_j_kg, upstream.entropy_j_kg_k
         if upstream.phase != "liquid":
-            raise ConfigError(
-                "HEM requires upstream h, s (vapor phase not supported yet)."
-            )
+            raise ConfigError("HEM requires upstream h, s (vapor phase not supported yet).")
         temperature = upstream.temperature_k
         return (
             self._props.h_liquid(temperature),

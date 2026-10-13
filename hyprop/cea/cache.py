@@ -10,8 +10,6 @@ at stage E6 when the solver's access pattern is known.
 
 from __future__ import annotations
 
-from typing import Dict, Tuple
-
 from hyprop.cea.backend import CEAResult, ThermochemistryBackend
 from hyprop.core.logging import get_logger
 
@@ -29,11 +27,12 @@ class CachedBackend(ThermochemistryBackend):
 
     def __init__(self, backend: ThermochemistryBackend) -> None:
         self._backend = backend
-        self._cache: Dict[Tuple[float, float, float], CEAResult] = {}
+        self._cache: dict[tuple[float, float, float], CEAResult] = {}
         self.hits = 0
         self.misses = 0
 
     def query(self, of: float, pc: float, eps: float) -> CEAResult:
+        """Cached query; key rounded to O/F 1e-3, Pc 100 Pa and eps 0.01."""
         key = (round(of, 3), round(pc, -2), round(eps, 2))
         result = self._cache.get(key)
         if result is not None:

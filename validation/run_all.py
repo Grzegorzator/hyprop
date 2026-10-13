@@ -31,18 +31,23 @@ def _versions() -> str:
 
 
 def _pytest_summary() -> str:
-    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-rs", "-p", "no:cacheprovider"],
-                       cwd=REPO, capture_output=True, text=True)
-    lines = [l for l in p.stdout.splitlines() if l.strip()]
+    p = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "-rs", "-p", "no:cacheprovider"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+    )
+    lines = [ln for ln in p.stdout.splitlines() if ln.strip()]
     tail = lines[-1] if lines else "?"
-    skips = [l for l in lines if l.startswith("SKIPPED")]
+    skips = [ln for ln in lines if ln.startswith("SKIPPED")]
     return tail + ("\n" + "\n".join(skips) if skips else "")
 
 
 def _git() -> str:
     try:
-        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO,
-                              capture_output=True, text=True).stdout.strip()
+        return subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True
+        ).stdout.strip()
     except Exception:
         return "?"
 
@@ -60,9 +65,21 @@ SECTIONS = (
 
 
 def _invariants_summary() -> str:
-    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
-                        "tests/test_invariants.py"], cwd=REPO, capture_output=True, text=True)
-    lines = [l for l in p.stdout.splitlines() if l.strip()]
+    p = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            "-p",
+            "no:cacheprovider",
+            "tests/test_invariants.py",
+        ],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+    )
+    lines = [ln for ln in p.stdout.splitlines() if ln.strip()]
     return lines[-1] if lines else "?"
 
 
@@ -82,18 +99,24 @@ def main() -> None:
         "# HyProp – raport walidacji (etap 1)\n",
         f"Wygenerowano: {_dt.datetime.now():%Y-%m-%d %H:%M}, commit `{_git()}`  ",
         f"Środowisko: {_versions()}  ",
-        "Polecenie: `python -m validation.run_all` (zmienne środowiskowe: patrz `validation/README.md`).\n",
+        "Polecenie: `python -m validation.run_all` (zmienne środowiskowe: patrz "
+        "`validation/README.md`).\n",
         "Zasada: wiersz może mieć PASS tylko przy sprawdzalnym źródle referencji. "
         "Brak źródła = `TODO: brak referencji`. INFO = wielkość raportowana bez kryterium.\n",
         f"**Razem: {tally(all_rows)}**\n",
         (REPO / "validation" / "SUMMARY_stage1.md").read_text(encoding="utf-8"),
         "## 0. Zestaw testów (wszystkie opcjonalne backendy zainstalowane)\n",
-        "```", _pytest_summary(), "```",
+        "```",
+        _pytest_summary(),
+        "```",
         *body,
         "## 7. Niezmienniki fizyczne (Hypothesis, `tests/test_invariants.py`)\n",
-        "Bilans masy utleniacza i paliwa, impuls = ∫F dt, port tylko rośnie, Pc między otoczeniem a zbiornikiem, "
+        "Bilans masy utleniacza i paliwa, impuls = ∫F dt, port tylko rośnie, Pc między otoczeniem "
+        "a zbiornikiem, "
         "brak NaN/ujemnych mas, niezależność od jednostek wejścia.\n",
-        "```", inv, "```",
+        "```",
+        inv,
+        "```",
         (REPO / "validation" / "NOTES_stage1.md").read_text(encoding="utf-8"),
     ]
     out = REPO / "docs" / "VALIDATION.md"

@@ -24,7 +24,7 @@ class ChamberDesign:
     """Chamber-level derived quantities at the chosen ROP point."""
 
     volume_m3: float
-    characteristic_length_m: float       #: L* = V_c/At
+    characteristic_length_m: float  #: L* = V_c/At
     residence_time_s: float
     length_over_diameter: float
 
@@ -34,13 +34,11 @@ def characteristic_length(volume_m3: float, throat_area_m2: float) -> float:
     return volume_m3 / throat_area_m2
 
 
-def residence_time(
-    volume_m3: float, point: OperatingPoint, mdot_kg_s: float
-) -> float:
-    """tau = V_c * rho_c / mdot [s], rho_c from the ROP chamber state."""
-    rho_c = point["pc"] / (
-        R_UNIVERSAL / 0.0265 * point["t_c"]
-    ) if "m_c" not in point.values else None
+def residence_time(volume_m3: float, point: OperatingPoint, mdot_kg_s: float) -> float:
+    """Tau = V_c * rho_c / mdot [s], rho_c from the ROP chamber state."""
+    rho_c = (
+        point["pc"] / (R_UNIVERSAL / 0.0265 * point["t_c"]) if "m_c" not in point.values else None
+    )
     # molar mass channel is not recorded; use ideal gas with M from gamma?
     # Recorded channels give pc, t_c; effective M via c* would double-count.
     # Use M = 26.5 g/mol typical for HDPE/N2O products (table range 25-28).
@@ -64,17 +62,11 @@ def size_chamber(
     (impulse-weighted web), from the geometry model.
     """
     section = math.pi * (0.5 * grain_outer_diameter_m) ** 2
-    volume = (
-        port_volume_m3
-        + section * (pre_chamber_length_m + post_chamber_length_m)
-    )
-    total_length = grain_length_m + pre_chamber_length_m \
-        + post_chamber_length_m
+    volume = port_volume_m3 + section * (pre_chamber_length_m + post_chamber_length_m)
+    total_length = grain_length_m + pre_chamber_length_m + post_chamber_length_m
     return ChamberDesign(
         volume_m3=volume,
         characteristic_length_m=characteristic_length(volume, throat_area_m2),
-        residence_time_s=residence_time(
-            volume, point, point["mdot_total"]
-        ),
+        residence_time_s=residence_time(volume, point, point["mdot_total"]),
         length_over_diameter=total_length / grain_outer_diameter_m,
     )

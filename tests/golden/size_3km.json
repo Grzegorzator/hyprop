@@ -1,32 +1,33 @@
 {
  "meta": {
   "cantera": "3.2.0",
-  "commit": "e64c468",
-  "generated": "2026-10-13T21:01:24",
+  "commit": "20d9f9b",
+  "generated": "2026-10-14T00:06:54",
   "numpy": "2.4.6",
   "python": "3.11.17"
  },
  "result": {
   "achieved": {
-   "isp_iw_s": 196.30700644260222,
-   "lro_s": 7.099999999999937,
-   "of_iw": 5.240029627193423,
-   "pc_iw_pa": 3214548.9536048966,
-   "thrust_iw_n": 497.98865254062275,
-   "total_impulse_ns": 4030.43696102208
+   "isp_iw_s": 204.8474393437612,
+   "lro_s": 7.1999999999999345,
+   "of_iw": 7.902233405926505,
+   "of_target": 7.926491961677423,
+   "pc_iw_pa": 3229280.3078321023,
+   "thrust_iw_n": 497.48862508368944,
+   "total_impulse_ns": 4030.2410048653974
   },
   "design": {
-   "cf_design": 1.4095405518998811,
-   "cf_sea_level": 1.3922392706656206,
-   "expansion_ratio": 4.998644958207211,
-   "grain_length_m": 0.5829856971529556,
-   "grain_outer_diameter_m": 0.04313636125423799,
+   "cf_design": 1.4434702494625689,
+   "cf_sea_level": 1.4238455424522836,
+   "expansion_ratio": 5.669923598432704,
+   "grain_length_m": 0.38965826174860946,
+   "grain_outer_diameter_m": 0.04333543108423112,
    "orifice_count": 4.0,
-   "orifice_diameter_m": 0.001762313933823555,
-   "oxidizer_mass_kg": 1.8353777913120743,
-   "port_initial_diameter_m": 0.027888967666645458,
-   "tank_volume_m3": 0.002651197834657481,
-   "throat_diameter_m": 0.012000884252910064
+   "orifice_diameter_m": 0.0017693056751172532,
+   "oxidizer_mass_kg": 1.879013007631587,
+   "port_initial_diameter_m": 0.028197229081267552,
+   "tank_volume_m3": 0.002714228776607803,
+   "throat_diameter_m": 0.011859001276813684
   },
   "iterations": 8,
   "warnings": []

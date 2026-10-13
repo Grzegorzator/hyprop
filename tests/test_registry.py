@@ -34,6 +34,7 @@ def test_duplicate_registration_rejected():
         pass
 
     with pytest.raises(RegistryError):
+
         @register_model("injector", "dup")
         class B:
             pass

@@ -36,18 +36,18 @@ class RegressionModel(ABC):
     def rdot(self, g_flux: float, grain_length_m: float) -> float:
         """Regression rate [m/s].
 
-        Parameters
-        ----------
-        g_flux:
-            Port mass flux [kg/(m^2*s)] consistent with :attr:`flux_basis`.
-        grain_length_m:
-            Grain length [m] (used by laws with an L^m term).
+        Args:
+            g_flux: Port mass flux [kg/(m^2*s)] consistent with :attr:`flux_basis`.
+            grain_length_m: Grain length [m] (used by laws with an L^m term).
         """
 
     @staticmethod
     def validate_flux_basis(flux_basis: str) -> str:
+        """Return ``flux_basis`` if it is ``"oxidizer"`` or ``"total"``.
+
+        Raises:
+            ConfigError: For any other value.
+        """
         if flux_basis not in ("oxidizer", "total"):
-            raise ConfigError(
-                f"flux_basis must be 'oxidizer' or 'total', got {flux_basis!r}."
-            )
+            raise ConfigError(f"flux_basis must be 'oxidizer' or 'total', got {flux_basis!r}.")
         return flux_basis

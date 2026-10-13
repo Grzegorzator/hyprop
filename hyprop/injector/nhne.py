@@ -31,14 +31,11 @@ class NHNEInjector(InjectorModel):
 
     def __init__(self, discharge_coefficient, orifice_count, orifice_area_m2):
         super().__init__(discharge_coefficient, orifice_count, orifice_area_m2)
-        self._spi = SPIInjector(
-            discharge_coefficient, orifice_count, orifice_area_m2
-        )
-        self._hem = HEMInjector(
-            discharge_coefficient, orifice_count, orifice_area_m2
-        )
+        self._spi = SPIInjector(discharge_coefficient, orifice_count, orifice_area_m2)
+        self._hem = HEMInjector(discharge_coefficient, orifice_count, orifice_area_m2)
 
     def mdot(self, upstream: FluidState, p_chamber_pa: float) -> float:
+        """Oxidizer mass flow [kg/s]: Dyer blend (kappa SPI + HEM) / (1 + kappa)."""
         dp = self._dp(upstream, p_chamber_pa)
         if dp <= 0.0:
             return 0.0
@@ -46,6 +43,6 @@ class NHNEInjector(InjectorModel):
         mdot_hem = self._hem.mdot(upstream, p_chamber_pa)
         dp_sat = upstream.vapor_pressure_pa - p_chamber_pa
         if dp_sat <= 0.0:
-            return mdot_spi                    # fully subcooled: no flashing
+            return mdot_spi  # fully subcooled: no flashing
         kappa = math.sqrt(dp / dp_sat)
         return (kappa * mdot_spi + mdot_hem) / (1.0 + kappa)

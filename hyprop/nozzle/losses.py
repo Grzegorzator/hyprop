@@ -31,9 +31,7 @@ def divergence_efficiency(half_angle_deg: float) -> float:
     return 0.5 * (1.0 + math.cos(math.radians(half_angle_deg)))
 
 
-def nozzle_efficiency(
-    half_angle_deg: float, extra_efficiency: float = 1.0
-) -> float:
+def nozzle_efficiency(half_angle_deg: float, extra_efficiency: float = 1.0) -> float:
     """Combined nozzle momentum efficiency: lambda * eta_extra.
 
     ``extra_efficiency`` collects boundary-layer/roughness/erosion effects

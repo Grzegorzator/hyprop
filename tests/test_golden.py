@@ -45,6 +45,7 @@ def _golden(name):
 @pytest.fixture(autouse=True)
 def _quiet_and_fresh_cache():
     import hyprop.simulation.solver as sm
+
     sm._TABLE_CACHE.clear()
     yield
     sm._TABLE_CACHE.clear()

@@ -11,8 +11,8 @@ their parameters from here, never from raw time steps
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence
 
 import pandas as pd
 
@@ -52,17 +52,17 @@ RECOMMENDATIONS = {
 class ROPReport:
     """Complete representative-operating-point analysis."""
 
-    points: Dict[str, OperatingPoint]
-    percentiles: List[OperatingPoint]
-    phases: List[PhaseStats]
+    points: dict[str, OperatingPoint]
+    percentiles: list[OperatingPoint]
+    phases: list[PhaseStats]
     #: impulse fraction -> fraction of burn time that delivered it.
-    time_shares: Dict[float, float]
+    time_shares: dict[float, float]
     #: plain time averages (for the time-vs-impulse-weighted comparison).
-    time_average: Dict[str, float]
-    recommendations: Dict[str, str] = field(
-        default_factory=lambda: dict(RECOMMENDATIONS))
+    time_average: dict[str, float]
+    recommendations: dict[str, str] = field(default_factory=lambda: dict(RECOMMENDATIONS))
 
     def point(self, name: str) -> OperatingPoint:
+        """Operating point by name (e.g. ``"impulse_weighted"``)."""
         return self.points[name]
 
     def for_module(self, module: str) -> OperatingPoint:
@@ -76,12 +76,17 @@ class ROPReport:
         return pd.DataFrame(rows).T
 
     def phases_table(self) -> pd.DataFrame:
+        """One row per burn phase: times, impulse/time shares, channel means."""
         records = []
         for phase in self.phases:
-            row = dict(phase=phase.name, t_start_s=phase.t_start_s,
-                       t_end_s=phase.t_end_s, impulse_ns=phase.impulse_ns,
-                       impulse_share=phase.impulse_share,
-                       time_share=phase.time_share)
+            row = dict(
+                phase=phase.name,
+                t_start_s=phase.t_start_s,
+                t_end_s=phase.t_end_s,
+                impulse_ns=phase.impulse_ns,
+                impulse_share=phase.impulse_share,
+                time_share=phase.time_share,
+            )
             row.update({f"mean_{k}": v for k, v in phase.means.items()})
             records.append(row)
         return pd.DataFrame.from_records(records)
@@ -91,12 +96,23 @@ def analyze(
     result,
     percentiles: Sequence[float] = PERCENTILES_DEFAULT,
 ) -> ROPReport:
-    """Build the full ROP analysis from a SimulationResult."""
+    """Build the representative-operating-point (ROP) analysis of a run.
+
+    Args:
+        result: Output of :func:`hyprop.api.run`.
+        percentiles: Impulse percentiles at which to report states [%].
+
+    Returns:
+        Named points (peak, impulse-weighted, heat-load, mass-flow, median
+        impulse), percentile points, burn phases, impulse/time shares and
+        plain time averages.
+    """
     history: TimeHistory = result.history
-    lro: Optional[float] = result.event_time("liquid_runout")
+    lro: float | None = result.event_time("liquid_runout")
 
     points = {
-        p.name: p for p in (
+        p.name: p
+        for p in (
             peak_performance_point(history),
             impulse_weighted_point(history),
             heat_load_point(history),
@@ -109,17 +125,17 @@ def analyze(
         percentiles=percentile_points(history, percentiles),
         phases=split_phases(history, lro),
         time_shares={
-            fraction: time_share_for_impulse(history, fraction)
-            for fraction in IMPULSE_FRACTIONS
+            fraction: time_share_for_impulse(history, fraction) for fraction in IMPULSE_FRACTIONS
         },
         time_average=averages_all_channels(history, "time"),
     )
     iw = report.point("impulse_weighted")
     ta = report.time_average
     _log.info(
-        "ROP: F_iw=%.0f N (time-avg %.0f N), Pc_iw=%.2f bar, "
-        "90%% It in %.0f%% of time",
-        iw["thrust"], ta["thrust"], iw["pc"] / 1e5,
+        "ROP: F_iw=%.0f N (time-avg %.0f N), Pc_iw=%.2f bar, 90%% It in %.0f%% of time",
+        iw["thrust"],
+        ta["thrust"],
+        iw["pc"] / 1e5,
         100 * report.time_shares[0.90],
     )
     return report

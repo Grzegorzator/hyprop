@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Optional
 
 from hyprop.core.constants import G0
 from hyprop.core.exceptions import BackendUnavailableError
@@ -45,19 +44,20 @@ class StationState:
 
     temperature_k: float
     pressure_pa: float
-    gamma: float                    #: frozen cp/cv at the station [-]
+    gamma: float  #: frozen cp/cv at the station [-]
     molar_mass_kg_mol: float
-    cp_j_kg_k: Optional[float] = None   #: frozen cp [J/(kg*K)]
-    gamma_eq: Optional[float] = None    #: equilibrium gamma_s [-]
+    cp_j_kg_k: float | None = None  #: frozen cp [J/(kg*K)]
+    gamma_eq: float | None = None  #: equilibrium gamma_s [-]
 
     @property
     def r_specific_j_kg_k(self) -> float:
         """Specific gas constant R = R_u / M [J/(kg*K)]."""
         from hyprop.core.constants import R_UNIVERSAL
+
         return R_UNIVERSAL / self.molar_mass_kg_mol
 
     @property
-    def cv_j_kg_k(self) -> Optional[float]:
+    def cv_j_kg_k(self) -> float | None:
         """Specific heat at constant volume [J/(kg*K)] (if cp known)."""
         return None if self.cp_j_kg_k is None else self.cp_j_kg_k / self.gamma
 
@@ -67,19 +67,21 @@ class ExpansionResult:
     """Result of expanding to the nozzle exit under one chemistry model."""
 
     exit_state: StationState
-    exhaust_velocity_m_s: float     #: ve at the exit plane [m/s]
+    exhaust_velocity_m_s: float  #: ve at the exit plane [m/s]
 
-    def isp_s(self, ambient_pressure_pa: float, eps: float,
-              cstar_m_s: float, pc_pa: float) -> float:
+    def isp_s(
+        self, ambient_pressure_pa: float, eps: float, cstar_m_s: float, pc_pa: float
+    ) -> float:
         """Delivered-ideal Isp [s] at given ambient pressure.
 
         Isp = [ve + (pe - pa) * Ae / mdot] / g0, with
         Ae/mdot = eps * cstar / pc  (from mdot = pc*At/cstar).
         """
         area_per_mdot = eps * cstar_m_s / pc_pa
-        thrust_per_mdot = self.exhaust_velocity_m_s + (
-            self.exit_state.pressure_pa - ambient_pressure_pa
-        ) * area_per_mdot
+        thrust_per_mdot = (
+            self.exhaust_velocity_m_s
+            + (self.exit_state.pressure_pa - ambient_pressure_pa) * area_per_mdot
+        )
         return thrust_per_mdot / G0
 
 
@@ -92,18 +94,16 @@ class CEAResult:
     eps: float
     chamber: StationState
     throat: StationState
-    equilibrium: ExpansionResult    #: shifting-equilibrium expansion (default)
-    frozen: ExpansionResult         #: frozen-from-chamber expansion (lower bound)
+    equilibrium: ExpansionResult  #: shifting-equilibrium expansion (default)
+    frozen: ExpansionResult  #: frozen-from-chamber expansion (lower bound)
     cstar_m_s: float
-    mole_fractions: Dict[str, float] = field(default_factory=dict)
+    mole_fractions: dict[str, float] = field(default_factory=dict)
     backend: str = ""
 
     def isp_s(self, ambient_pressure_pa: float, mode: str = "equilibrium") -> float:
         """Ideal Isp [s] at ambient pressure, per D6 default mode."""
         expansion = self.equilibrium if mode == "equilibrium" else self.frozen
-        return expansion.isp_s(
-            ambient_pressure_pa, self.eps, self.cstar_m_s, self.pc_pa
-        )
+        return expansion.isp_s(ambient_pressure_pa, self.eps, self.cstar_m_s, self.pc_pa)
 
 
 class ThermochemistryBackend(ABC):
@@ -115,14 +115,14 @@ class ThermochemistryBackend(ABC):
     def query(self, of: float, pc: float, eps: float) -> CEAResult:
         """Compute combustion and expansion properties.
 
-        Parameters
-        ----------
-        of:
-            Oxidizer-to-fuel mass ratio [-].
-        pc:
-            Chamber (stagnation) pressure [Pa].
-        eps:
-            Nozzle expansion area ratio Ae/At [-].
+        Args:
+            of: Oxidizer-to-fuel mass ratio [-].
+            pc: Chamber (stagnation) pressure [Pa].
+            eps: Nozzle expansion area ratio Ae/At [-].
+
+        Returns:
+            Chamber state, ideal c*, and the exit expansion under shifting
+            equilibrium and frozen-at-chamber chemistry.
         """
 
 
@@ -130,7 +130,17 @@ def get_backend(name: str = "auto", **kwargs) -> ThermochemistryBackend:
     """Instantiate a thermochemistry backend.
 
     ``"auto"`` tries RocketCEA first (native NASA CEA results), then
-    Cantera. Explicit names: ``"rocketcea"``, ``"cantera"``.
+    Cantera. The Cantera backend (GRI-Mech 3.0) has no condensed carbon and
+    is accurate only for atomic C/O < 1 (docs/VALIDATION.md).
+
+    Args:
+        name: ``"auto"``, ``"rocketcea"`` or ``"cantera"``.
+        **kwargs: Backend arguments, typically ``fuel`` and ``oxidizer``
+            database keys.
+
+    Returns:
+        A backend whose :meth:`ThermochemistryBackend.query` answers
+        (O/F, Pc, eps) points.
     """
     from hyprop.core.registry import autodiscover, get_model
 
@@ -145,6 +155,4 @@ def get_backend(name: str = "auto", **kwargs) -> ThermochemistryBackend:
             return backend
         except BackendUnavailableError as exc:
             errors.append(f"{candidate}: {exc}")
-    raise BackendUnavailableError(
-        "No thermochemistry backend available. " + " | ".join(errors)
-    )
+    raise BackendUnavailableError("No thermochemistry backend available. " + " | ".join(errors))

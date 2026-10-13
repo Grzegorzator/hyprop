@@ -1,12 +1,12 @@
 # HyProp – raport walidacji (etap 1)
 
-Wygenerowano: 2026-10-13 21:12, commit `22b579b`  
+Wygenerowano: 2026-10-14 00:18, commit `b2ad814`  
 Środowisko: Python 3.11.17 (Linux), numpy 2.4.6, scipy 1.17.1, cantera 3.2.0, CoolProp 8.0.0, rocketcea 1.2.3, pymoo 0.6.2, shapely 2.2.0, pint 0.25.3  
 Polecenie: `python -m validation.run_all` (zmienne środowiskowe: patrz `validation/README.md`).
 
 Zasada: wiersz może mieć PASS tylko przy sprawdzalnym źródle referencji. Brak źródła = `TODO: brak referencji`. INFO = wielkość raportowana bez kryterium.
 
-**Razem: INFO: 48, PASS: 130, TODO: brak referencji: 2**
+**Razem: INFO: 48, PASS: 132, TODO: brak referencji: 2**
 
 ## Podsumowanie etapu 1
 
@@ -60,11 +60,11 @@ Zasada: wiersz może mieć PASS tylko przy sprawdzalnym źródle referencji. Bra
 ## 0. Zestaw testów (wszystkie opcjonalne backendy zainstalowane)
 
 ```
-134 passed in 142.32s (0:02:22)
+140 passed in 160.52s (0:02:40)
 ```
 ## 1. Odtworzenie deklaracji z README
 
-Podsumowanie: INFO: 5, PASS: 60
+Podsumowanie: INFO: 5, PASS: 62
 
 | # | Wielkość | Przypadek | Referencja | Źródło referencji | HyProp | Odchyłka | Tolerancja | Status | Komentarz |
 |---|---|---|---|---|---|---|---|---|---|
@@ -92,47 +92,49 @@ Podsumowanie: INFO: 5, PASS: 60
 | 22 | Udział fazy ciekłej w It [%] | ROP examples/pe_05kN.yaml | 92.8 pp | README.md (v0.2, sekcje Validation/Examples) | 92.8 pp | -0.003057 pp | ±0.05 pp | **PASS** |  |
 | 23 | Udział fazy ciekłej w czasie [%] | ROP examples/pe_05kN.yaml | 43.1 pp | README.md (v0.2, sekcje Validation/Examples) | 43.13 pp | +0.03487 pp | ±0.05 pp | **PASS** |  |
 | 24 | Liczba iteracji | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 8 | README.md (v0.2, sekcje Validation/Examples) | 8 | +0 | ±0 | **PASS** | Tolerancja sizingu 1 % (v0.1: 3 %); v0.1 padało na błędzie B1. |
-| 25 | F_iw | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 498.0 N | README.md (v0.2, sekcje Validation/Examples) | 498.0 N | -0.01135 N | ±0.5 N | **PASS** |  |
-| 26 | It | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 4030.0 Ns | README.md (v0.2, sekcje Validation/Examples) | 4030.4 Ns | +0.437 Ns | ±0.5 Ns | **PASS** |  |
-| 27 | Dt | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 12 mm | README.md (v0.2, sekcje Validation/Examples) | 12 mm | +0.0008843 mm | ±0.05 mm | **PASS** |  |
-| 28 | eps | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 5 | README.md (v0.2, sekcje Validation/Examples) | 4.999 | -0.001355 | ±0.005 | **PASS** |  |
-| 29 | Apogeum (m_dry = 7 kg) | examples/trajectory_pe_3km.py | 3736.0 m | README.md (v0.2, sekcje Validation/Examples) | 3735.8 m | -0.1813 m | ±0.5 m | **PASS** | m_dry, Cd, D to założenia (skrypt); bez referencji lotnej. |
-| 30 | ΔHf PE [kJ/mol C2H4] | baza HyProp `ldpe`/`hdpe` | -56.36 | Splitstone & Johnson, J. Res. NBS 78A(5) 611-616 (1974), doi:10.6028/jres.078A.038 | -56.36 | +0.00 % | ±0.01 % | **PASS** | 72 % krystaliczności. NASA CEA thermo.inp '(CH2)x(cr)' ma -51.2 (McBride 1996). |
-| 31 | Tc – cantera | PE/N2O O/F 6.5, Pc 35 bar | 3276.2 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3278.3 | +0.06 % | ±0.5 % | **PASS** |  |
-| 32 | c* – cantera | PE/N2O O/F 6.5, Pc 35 bar | 1615.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1617.4 | +0.10 % | ±0.5 % | **PASS** |  |
-| 33 | γ_s (równowagowe) – cantera | PE/N2O O/F 6.5, Pc 35 bar | 1.167 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.167 | -0.00 % | ±0.5 % | **PASS** |  |
-| 34 | γ zamrożone cp/cv – cantera | PE/N2O O/F 6.5, Pc 35 bar | 1.247 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.247 | -0.00 % | ±0.5 % | **PASS** |  |
-| 35 | Isp, p_e = 1 atm (ε=5.141) – cantera | PE/N2O O/F 6.5, Pc 35 bar | 245.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 245.9 | +0.02 % | ±0.5 % | **PASS** |  |
-| 36 | Isp próżn.-wylot v_e/g0, ε=5 – cantera | PE/N2O O/F 6.5, Pc 35 bar | 244.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 244.9 | +0.03 % | ±0.5 % | **PASS** |  |
-| 37 | Tc – rocketcea | PE/N2O O/F 6.5, Pc 35 bar | 3276.2 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3275.3 | -0.03 % | ±0.5 % | **PASS** |  |
-| 38 | c* – rocketcea | PE/N2O O/F 6.5, Pc 35 bar | 1615.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1615.5 | -0.02 % | ±0.5 % | **PASS** |  |
-| 39 | Isp, p_e = 1 atm (ε=5.141) – rocketcea | PE/N2O O/F 6.5, Pc 35 bar | 245.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 245.7 | -0.02 % | ±0.5 % | **PASS** |  |
-| 40 | c* ze wzoru idealnego z γ zamrożone vs c* CEA [%] | PE/N2O O/F 6.5, Pc 35 bar | 1615.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1580.2 | -2.20 % | — | **INFO** | Wzór idealny z γ zamrożonym zaniża c* (dawne „~2.3 %” ze skryptu 07). |
-| 41 | c* ze wzoru idealnego z γ γ_s vs c* CEA [%] | PE/N2O O/F 6.5, Pc 35 bar | 1615.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1618.3 | +0.15 % | ±0.5 % | **PASS** | Z γ_s wzór odtwarza c* równowagowe. |
-| 42 | Tc – cantera | PE/N2O O/F 6.3, Pc 32 bar | 3246.5 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3248.6 | +0.06 % | ±0.5 % | **PASS** |  |
-| 43 | c* – cantera | PE/N2O O/F 6.3, Pc 32 bar | 1613.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1614.3 | +0.08 % | ±0.5 % | **PASS** |  |
-| 44 | γ_s (równowagowe) – cantera | PE/N2O O/F 6.3, Pc 32 bar | 1.171 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.171 | -0.00 % | ±0.5 % | **PASS** |  |
-| 45 | γ zamrożone cp/cv – cantera | PE/N2O O/F 6.3, Pc 32 bar | 1.248 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.248 | -0.00 % | ±0.5 % | **PASS** |  |
-| 46 | Isp, p_e = 1 atm (ε=4.792) – cantera | PE/N2O O/F 6.3, Pc 32 bar | 242.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 242.8 | +0.02 % | ±0.5 % | **PASS** |  |
-| 47 | Isp próżn.-wylot v_e/g0, ε=5 – cantera | PE/N2O O/F 6.3, Pc 32 bar | 244.3 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 244.3 | +0.02 % | ±0.5 % | **PASS** |  |
-| 48 | Tc – rocketcea | PE/N2O O/F 6.3, Pc 32 bar | 3246.5 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3245.5 | -0.03 % | ±0.5 % | **PASS** |  |
-| 49 | c* – rocketcea | PE/N2O O/F 6.3, Pc 32 bar | 1613.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1612.6 | -0.02 % | ±0.5 % | **PASS** |  |
-| 50 | Isp, p_e = 1 atm (ε=4.792) – rocketcea | PE/N2O O/F 6.3, Pc 32 bar | 242.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 242.7 | -0.02 % | ±0.5 % | **PASS** |  |
-| 51 | c* ze wzoru idealnego z γ zamrożone vs c* CEA [%] | PE/N2O O/F 6.3, Pc 32 bar | 1613.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1579.4 | -2.08 % | — | **INFO** | Wzór idealny z γ zamrożonym zaniża c* (dawne „~2.3 %” ze skryptu 07). |
-| 52 | c* ze wzoru idealnego z γ γ_s vs c* CEA [%] | PE/N2O O/F 6.3, Pc 32 bar | 1613.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1616.0 | +0.19 % | ±0.5 % | **PASS** | Z γ_s wzór odtwarza c* równowagowe. |
-| 53 | Tc – cantera | PE/N2O O/F 8.0, Pc 32 bar | 3330.9 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3332.5 | +0.05 % | ±0.5 % | **PASS** |  |
-| 54 | c* – cantera | PE/N2O O/F 8.0, Pc 32 bar | 1605.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1608.4 | +0.17 % | ±0.5 % | **PASS** |  |
-| 55 | γ_s (równowagowe) – cantera | PE/N2O O/F 8.0, Pc 32 bar | 1.148 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.148 | -0.01 % | ±0.5 % | **PASS** |  |
-| 56 | γ zamrożone cp/cv – cantera | PE/N2O O/F 8.0, Pc 32 bar | 1.243 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.243 | +0.00 % | ±0.5 % | **PASS** |  |
-| 57 | Isp, p_e = 1 atm (ε=5.253) – cantera | PE/N2O O/F 8.0, Pc 32 bar | 246.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 246.1 | +0.04 % | ±0.5 % | **PASS** |  |
-| 58 | Isp próżn.-wylot v_e/g0, ε=5 – cantera | PE/N2O O/F 8.0, Pc 32 bar | 244.1 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 244.2 | +0.04 % | ±0.5 % | **PASS** |  |
-| 59 | Tc – rocketcea | PE/N2O O/F 8.0, Pc 32 bar | 3330.9 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3330.2 | -0.02 % | ±0.5 % | **PASS** |  |
-| 60 | c* – rocketcea | PE/N2O O/F 8.0, Pc 32 bar | 1605.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1605.4 | -0.02 % | ±0.5 % | **PASS** |  |
-| 61 | Isp, p_e = 1 atm (ε=5.253) – rocketcea | PE/N2O O/F 8.0, Pc 32 bar | 246.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 246.0 | -0.02 % | ±0.5 % | **PASS** |  |
-| 62 | c* ze wzoru idealnego z γ zamrożone vs c* CEA [%] | PE/N2O O/F 8.0, Pc 32 bar | 1605.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1559.8 | -2.86 % | — | **INFO** | Wzór idealny z γ zamrożonym zaniża c* (dawne „~2.3 %” ze skryptu 07). |
-| 63 | c* ze wzoru idealnego z γ γ_s vs c* CEA [%] | PE/N2O O/F 8.0, Pc 32 bar | 1605.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1605.3 | -0.03 % | ±0.5 % | **PASS** | Z γ_s wzór odtwarza c* równowagowe. |
-| 64 | max \|ESDU/CoolProp−1\| p_sat [%] | 263–303 K, krok 0.5 K | 1.5 pp | README.md (v0.2, sekcje Validation/Examples); CoolProp 8.0.0, EOS N2O: Lemmon & Span, J. Chem. Eng. Data 51 (2006) 785–850 (klucz Lemmon-JCED-2006) | 0.1617 pp | -1.338 pp | — | **PASS** | Deklaracja „within 1.5 %”. Kolumna HyProp = max odchyłka; odchyłka = zapas do 1.5 %. |
-| 65 | max \|ESDU/CoolProp−1\| ρ_l [%] | 263–303 K, krok 0.5 K | 1.5 pp | README.md (v0.2, sekcje Validation/Examples); CoolProp 8.0.0, EOS N2O: Lemmon & Span, J. Chem. Eng. Data 51 (2006) 785–850 (klucz Lemmon-JCED-2006) | 0.191 pp | -1.309 pp | — | **PASS** | Deklaracja „within 1.5 %”. Kolumna HyProp = max odchyłka; odchyłka = zapas do 1.5 %. |
+| 25 | F_iw | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 497.0 N | README.md (v0.2, sekcje Validation/Examples) | 497.5 N | +0.4886 N | ±0.5 N | **PASS** |  |
+| 26 | O/F_iw (cel = O/F optymalne Isp) | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 7.9 | README.md (v0.2, sekcje Validation/Examples) | 7.902 | +0.002233 | ±0.005 | **PASS** | Cel 7.93; tolerancja pętli 2 %. |
+| 27 | Długość ziarna | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 390.0 mm | README.md (v0.2, sekcje Validation/Examples) | 389.7 mm | -0.3417 mm | ±0.5 mm | **PASS** |  |
+| 28 | It | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 4030.0 Ns | README.md (v0.2, sekcje Validation/Examples) | 4030.2 Ns | +0.241 Ns | ±0.5 Ns | **PASS** |  |
+| 29 | Dt | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 11.9 mm | README.md (v0.2, sekcje Validation/Examples) | 11.86 mm | -0.041 mm | ±0.05 mm | **PASS** |  |
+| 30 | eps | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 5.67 | README.md (v0.2, sekcje Validation/Examples) | 5.67 | -7.64e-05 | ±0.005 | **PASS** |  |
+| 31 | Apogeum (m_dry = 7 kg) | examples/trajectory_pe_3km.py | 3761.0 m | README.md (v0.2, sekcje Validation/Examples) | 3760.6 m | -0.3774 m | ±0.5 m | **PASS** | Poglądowe: m_dry, Cd, D zgadnięte (masa rakiety nieznana); bez referencji lotnej. |
+| 32 | ΔHf PE [kJ/mol C2H4] | baza HyProp `ldpe`/`hdpe` | -56.36 | Splitstone & Johnson, J. Res. NBS 78A(5) 611-616 (1974), doi:10.6028/jres.078A.038 | -56.36 | +0.00 % | ±0.01 % | **PASS** | 72 % krystaliczności. NASA CEA thermo.inp '(CH2)x(cr)' ma -51.2 (McBride 1996). |
+| 33 | Tc – cantera | PE/N2O O/F 6.5, Pc 35 bar | 3276.2 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3278.3 | +0.06 % | ±0.5 % | **PASS** |  |
+| 34 | c* – cantera | PE/N2O O/F 6.5, Pc 35 bar | 1615.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1617.4 | +0.10 % | ±0.5 % | **PASS** |  |
+| 35 | γ_s (równowagowe) – cantera | PE/N2O O/F 6.5, Pc 35 bar | 1.167 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.167 | -0.00 % | ±0.5 % | **PASS** |  |
+| 36 | γ zamrożone cp/cv – cantera | PE/N2O O/F 6.5, Pc 35 bar | 1.247 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.247 | -0.00 % | ±0.5 % | **PASS** |  |
+| 37 | Isp, p_e = 1 atm (ε=5.141) – cantera | PE/N2O O/F 6.5, Pc 35 bar | 245.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 245.9 | +0.02 % | ±0.5 % | **PASS** |  |
+| 38 | Isp próżn.-wylot v_e/g0, ε=5 – cantera | PE/N2O O/F 6.5, Pc 35 bar | 244.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 244.9 | +0.03 % | ±0.5 % | **PASS** |  |
+| 39 | Tc – rocketcea | PE/N2O O/F 6.5, Pc 35 bar | 3276.2 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3275.3 | -0.03 % | ±0.5 % | **PASS** |  |
+| 40 | c* – rocketcea | PE/N2O O/F 6.5, Pc 35 bar | 1615.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1615.5 | -0.02 % | ±0.5 % | **PASS** |  |
+| 41 | Isp, p_e = 1 atm (ε=5.141) – rocketcea | PE/N2O O/F 6.5, Pc 35 bar | 245.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 245.7 | -0.02 % | ±0.5 % | **PASS** |  |
+| 42 | c* ze wzoru idealnego z γ zamrożone vs c* CEA [%] | PE/N2O O/F 6.5, Pc 35 bar | 1615.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1580.2 | -2.20 % | — | **INFO** | Wzór idealny z γ zamrożonym zaniża c* (dawne „~2.3 %” ze skryptu 07). |
+| 43 | c* ze wzoru idealnego z γ γ_s vs c* CEA [%] | PE/N2O O/F 6.5, Pc 35 bar | 1615.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1618.3 | +0.15 % | ±0.5 % | **PASS** | Z γ_s wzór odtwarza c* równowagowe. |
+| 44 | Tc – cantera | PE/N2O O/F 6.3, Pc 32 bar | 3246.5 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3248.6 | +0.06 % | ±0.5 % | **PASS** |  |
+| 45 | c* – cantera | PE/N2O O/F 6.3, Pc 32 bar | 1613.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1614.3 | +0.08 % | ±0.5 % | **PASS** |  |
+| 46 | γ_s (równowagowe) – cantera | PE/N2O O/F 6.3, Pc 32 bar | 1.171 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.171 | -0.00 % | ±0.5 % | **PASS** |  |
+| 47 | γ zamrożone cp/cv – cantera | PE/N2O O/F 6.3, Pc 32 bar | 1.248 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.248 | -0.00 % | ±0.5 % | **PASS** |  |
+| 48 | Isp, p_e = 1 atm (ε=4.792) – cantera | PE/N2O O/F 6.3, Pc 32 bar | 242.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 242.8 | +0.02 % | ±0.5 % | **PASS** |  |
+| 49 | Isp próżn.-wylot v_e/g0, ε=5 – cantera | PE/N2O O/F 6.3, Pc 32 bar | 244.3 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 244.3 | +0.02 % | ±0.5 % | **PASS** |  |
+| 50 | Tc – rocketcea | PE/N2O O/F 6.3, Pc 32 bar | 3246.5 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3245.5 | -0.03 % | ±0.5 % | **PASS** |  |
+| 51 | c* – rocketcea | PE/N2O O/F 6.3, Pc 32 bar | 1613.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1612.6 | -0.02 % | ±0.5 % | **PASS** |  |
+| 52 | Isp, p_e = 1 atm (ε=4.792) – rocketcea | PE/N2O O/F 6.3, Pc 32 bar | 242.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 242.7 | -0.02 % | ±0.5 % | **PASS** |  |
+| 53 | c* ze wzoru idealnego z γ zamrożone vs c* CEA [%] | PE/N2O O/F 6.3, Pc 32 bar | 1613.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1579.4 | -2.08 % | — | **INFO** | Wzór idealny z γ zamrożonym zaniża c* (dawne „~2.3 %” ze skryptu 07). |
+| 54 | c* ze wzoru idealnego z γ γ_s vs c* CEA [%] | PE/N2O O/F 6.3, Pc 32 bar | 1613.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1616.0 | +0.19 % | ±0.5 % | **PASS** | Z γ_s wzór odtwarza c* równowagowe. |
+| 55 | Tc – cantera | PE/N2O O/F 8.0, Pc 32 bar | 3330.9 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3332.5 | +0.05 % | ±0.5 % | **PASS** |  |
+| 56 | c* – cantera | PE/N2O O/F 8.0, Pc 32 bar | 1605.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1608.4 | +0.17 % | ±0.5 % | **PASS** |  |
+| 57 | γ_s (równowagowe) – cantera | PE/N2O O/F 8.0, Pc 32 bar | 1.148 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.148 | -0.01 % | ±0.5 % | **PASS** |  |
+| 58 | γ zamrożone cp/cv – cantera | PE/N2O O/F 8.0, Pc 32 bar | 1.243 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1.243 | +0.00 % | ±0.5 % | **PASS** |  |
+| 59 | Isp, p_e = 1 atm (ε=5.253) – cantera | PE/N2O O/F 8.0, Pc 32 bar | 246.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 246.1 | +0.04 % | ±0.5 % | **PASS** |  |
+| 60 | Isp próżn.-wylot v_e/g0, ε=5 – cantera | PE/N2O O/F 8.0, Pc 32 bar | 244.1 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 244.2 | +0.04 % | ±0.5 % | **PASS** |  |
+| 61 | Tc – rocketcea | PE/N2O O/F 8.0, Pc 32 bar | 3330.9 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3330.2 | -0.02 % | ±0.5 % | **PASS** |  |
+| 62 | c* – rocketcea | PE/N2O O/F 8.0, Pc 32 bar | 1605.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1605.4 | -0.02 % | ±0.5 % | **PASS** |  |
+| 63 | Isp, p_e = 1 atm (ε=5.253) – rocketcea | PE/N2O O/F 8.0, Pc 32 bar | 246.0 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 246.0 | -0.02 % | ±0.5 % | **PASS** |  |
+| 64 | c* ze wzoru idealnego z γ zamrożone vs c* CEA [%] | PE/N2O O/F 8.0, Pc 32 bar | 1605.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1559.8 | -2.86 % | — | **INFO** | Wzór idealny z γ zamrożonym zaniża c* (dawne „~2.3 %” ze skryptu 07). |
+| 65 | c* ze wzoru idealnego z γ γ_s vs c* CEA [%] | PE/N2O O/F 8.0, Pc 32 bar | 1605.7 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1605.3 | -0.03 % | ±0.5 % | **PASS** | Z γ_s wzór odtwarza c* równowagowe. |
+| 66 | max \|ESDU/CoolProp−1\| p_sat [%] | 263–303 K, krok 0.5 K | 1.5 pp | README.md (v0.2, sekcje Validation/Examples); CoolProp 8.0.0, EOS N2O: Lemmon & Span, J. Chem. Eng. Data 51 (2006) 785–850 (klucz Lemmon-JCED-2006) | 0.1617 pp | -1.338 pp | — | **PASS** | Deklaracja „within 1.5 %”. Kolumna HyProp = max odchyłka; odchyłka = zapas do 1.5 %. |
+| 67 | max \|ESDU/CoolProp−1\| ρ_l [%] | 263–303 K, krok 0.5 K | 1.5 pp | README.md (v0.2, sekcje Validation/Examples); CoolProp 8.0.0, EOS N2O: Lemmon & Span, J. Chem. Eng. Data 51 (2006) 785–850 (klucz Lemmon-JCED-2006) | 0.191 pp | -1.309 pp | — | **PASS** | Deklaracja „within 1.5 %”. Kolumna HyProp = max odchyłka; odchyłka = zapas do 1.5 %. |
 
 ## 2. Termochemia PE/N2O – siatka vs NASA CEA
 
@@ -303,7 +305,7 @@ Podsumowanie: PASS: 10
 Bilans masy utleniacza i paliwa, impuls = ∫F dt, port tylko rośnie, Pc między otoczeniem a zbiornikiem, brak NaN/ujemnych mas, niezależność od jednostek wejścia.
 
 ```
-3 passed in 29.37s
+3 passed in 25.81s
 ```
 ## 2. Ustalenia etapu 1 (pkt 0–1) i ich los
 

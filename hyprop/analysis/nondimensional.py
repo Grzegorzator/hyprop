@@ -17,8 +17,6 @@ assume turbulent boundary layer) and compressible port flow (Ma > 0.3).
 
 from __future__ import annotations
 
-from typing import Dict, List
-
 import numpy as np
 
 from hyprop.core.constants import R_UNIVERSAL
@@ -34,10 +32,10 @@ RE_TURBULENT_MIN = 1.0e4
 MA_INCOMPRESSIBLE_MAX = 0.30
 
 
-def port_numbers(history: TimeHistory) -> Dict[str, np.ndarray]:
+def port_numbers(history: TimeHistory) -> dict[str, np.ndarray]:
     """Time series of port Re and Ma (at the port exit station)."""
     g_flux = history["g_flux"]
-    d_h = history["d_port"]                     # cylindrical: D_h = D_port
+    d_h = history["d_port"]  # cylindrical: D_h = D_port
     t_c = history["t_c"]
     gamma = history["gamma"]
     reynolds = g_flux * d_h / MU_COMBUSTION_GAS
@@ -48,10 +46,10 @@ def port_numbers(history: TimeHistory) -> Dict[str, np.ndarray]:
     return {"Re": reynolds, "Ma": velocity / sound}
 
 
-def regime_flags(history: TimeHistory) -> List[str]:
+def regime_flags(history: TimeHistory) -> list[str]:
     """Human-readable warnings about model-validity violations."""
     numbers = port_numbers(history)
-    flags: List[str] = []
+    flags: list[str] = []
     # evaluate only while thrust is significant (liquid phase mostly)
     active = history["thrust"] > 0.1 * history["thrust"].max()
     if np.any(numbers["Re"][active] < RE_TURBULENT_MIN):

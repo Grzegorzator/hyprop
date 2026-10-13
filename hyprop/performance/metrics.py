@@ -49,10 +49,24 @@ def ideal_effective_exhaust_velocity(
     Sutton & Biblarz 9th ed., Eqs. 2-16, 3-24, 3-32: c = c* C_F).
     The conical divergence factor ``lambda`` multiplies the momentum term
     only, not the pressure term (Sutton Eq. 3-34 and the note below it).
+
+    Args:
+        exhaust_velocity_m_s: Ideal exit velocity v_e from the
+            thermochemistry backend [m/s].
+        exit_pressure_pa: Exit static pressure p_e [Pa].
+        ambient_pressure_pa: Ambient pressure p_a [Pa].
+        expansion_ratio: Nozzle area ratio eps = A_e/A_t [-].
+        cstar_ideal_m_s: Ideal characteristic velocity c*_i [m/s].
+        pc_pa: Chamber pressure p_c [Pa].
+        divergence: Conical divergence factor lambda [-] (1 = no loss).
+
+    Returns:
+        Ideal effective exhaust velocity c_i [m/s].
     """
-    return divergence * exhaust_velocity_m_s + (
-        exit_pressure_pa - ambient_pressure_pa
-    ) * expansion_ratio * cstar_ideal_m_s / pc_pa
+    return (
+        divergence * exhaust_velocity_m_s
+        + (exit_pressure_pa - ambient_pressure_pa) * expansion_ratio * cstar_ideal_m_s / pc_pa
+    )
 
 
 def delivered_thrust(
@@ -68,6 +82,17 @@ def delivered_thrust(
     "Performance Correction Factors", Eqs. 3-40 and 3-41; worked in
     Example 3-7). zeta_c* is the combustion (c*) efficiency, zeta_CF the
     nozzle (thrust-coefficient) efficiency including divergence.
+
+    Args:
+        mdot_kg_s: Actual propellant mass flow [kg/s].
+        c_ideal_m_s: Ideal effective exhaust velocity c_i [m/s], see
+            :func:`ideal_effective_exhaust_velocity`.
+        zeta_cstar: Combustion (c*) efficiency [-].
+        zeta_cf: Nozzle (thrust-coefficient) efficiency [-] other than the
+            divergence already contained in ``c_ideal_m_s``.
+
+    Returns:
+        Delivered thrust [N].
     """
     return zeta_cstar * zeta_cf * mdot_kg_s * c_ideal_m_s
 
@@ -86,9 +111,7 @@ def cstar_delivered(pc_pa: float, throat_area_m2: float, mdot_kg_s: float) -> fl
     return pc_pa * throat_area_m2 / mdot_kg_s
 
 
-def thrust_coefficient_delivered(
-    thrust_n: float, pc_pa: float, throat_area_m2: float
-) -> float:
+def thrust_coefficient_delivered(thrust_n: float, pc_pa: float, throat_area_m2: float) -> float:
     """Delivered thrust coefficient Cf [-] = F/(pc*At)."""
     if pc_pa <= 0.0 or throat_area_m2 <= 0.0:
         raise ValueError("pc and At must be positive.")

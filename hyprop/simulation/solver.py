@@ -39,7 +39,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 from scipy.optimize import brentq
 
@@ -47,17 +46,17 @@ from hyprop.cea.backend import ThermochemistryBackend
 from hyprop.cea.table import TabulatedBackend
 from hyprop.core.config import EngineConfig
 from hyprop.core.constants import G0, P_ATM_SL
-from hyprop.core.exceptions import ConfigError, ConvergenceError
+from hyprop.core.exceptions import ConfigError
 from hyprop.core.logging import get_logger
 from hyprop.core.registry import autodiscover, get_model
 from hyprop.core.state import TimeHistory
 from hyprop.data import load_fuel
+from hyprop.geometry.base import GrainGeometry
+from hyprop.injector.base import InjectorModel
 from hyprop.performance.metrics import (
     delivered_thrust,
     ideal_effective_exhaust_velocity,
 )
-from hyprop.geometry.base import GrainGeometry
-from hyprop.injector.base import InjectorModel
 from hyprop.regression.power_law import PowerLawRegression
 from hyprop.tank.base import TankModel
 from hyprop.tank.simple_models import ConstantMdotTank
@@ -67,19 +66,31 @@ _log = get_logger(__name__)
 #: Default CEA table resolution (O/F x Pc).
 _TABLE_OF = 10
 _TABLE_PC = 7
-_MIN_PC_FACTOR = 1.10        # stop when Pc < factor * Pa
+_MIN_PC_FACTOR = 1.10  # stop when Pc < factor * Pa
 
 
 @dataclass
 class SimulationResult:
-    """Full transient output + events + derived summary."""
+    """Full transient output + events + derived summary.
+
+    Attributes:
+        history: Time series of all state channels (SI units).
+        events: ``(time_s, name)`` pairs; names include ``liquid_runout``,
+            ``oxidizer_depleted``, ``fuel_burnout``, ``pressure_decay`` and
+            ``time_budget``.
+        summary: ``burn_time_s``, ``total_impulse_ns``, ``peak_thrust_n``,
+            ``mean_thrust_n``, ``peak_pc_pa``, ``propellant_used_kg``,
+            ``isp_mean_s`` and further derived metrics.
+        thermo_backend: Thermochemistry used, e.g. ``"tabulated[cantera]"``.
+    """
 
     history: TimeHistory
-    events: List[Tuple[float, str]] = field(default_factory=list)
-    summary: Dict[str, float] = field(default_factory=dict)
-    thermo_backend: str = ""        #: e.g. "tabulated[rocketcea]"
+    events: list[tuple[float, str]] = field(default_factory=list)
+    summary: dict[str, float] = field(default_factory=dict)
+    thermo_backend: str = ""  #: e.g. "tabulated[rocketcea]"
 
-    def event_time(self, name: str) -> Optional[float]:
+    def event_time(self, name: str) -> float | None:
+        """Time [s] of the first event called ``name``, or None."""
         for time_s, event in self.events:
             if event == name:
                 return time_s
@@ -94,7 +105,8 @@ def _build_components(config: EngineConfig):
 
     geometry_cls = get_model("geometry", config.grain.geometry)
     geometry: GrainGeometry = geometry_cls.from_spec(
-        config.grain.length_m, config.grain.outer_diameter_m,
+        config.grain.length_m,
+        config.grain.outer_diameter_m,
         config.grain.port,
     )
 
@@ -114,16 +126,11 @@ def _build_components(config: EngineConfig):
     if config.tank.model == "equilibrium_blowdown":
         if config.tank.volume_m3 is None or config.tank.oxidizer_mass_kg is None:
             raise ConfigError(
-                "equilibrium_blowdown requires tank.volume_m3 and "
-                "tank.oxidizer_mass_kg."
+                "equilibrium_blowdown requires tank.volume_m3 and tank.oxidizer_mass_kg."
             )
         tank_kwargs.setdefault("volume_m3", config.tank.volume_m3)
-        tank_kwargs.setdefault(
-            "oxidizer_mass_kg", config.tank.oxidizer_mass_kg
-        )
-        tank_kwargs.setdefault(
-            "temperature_k", config.oxidizer.temperature_k
-        )
+        tank_kwargs.setdefault("oxidizer_mass_kg", config.tank.oxidizer_mass_kg)
+        tank_kwargs.setdefault("temperature_k", config.oxidizer.temperature_k)
     tank: TankModel = tank_cls(**tank_kwargs)
 
     if config.injector.orifice_diameter_m is None:
@@ -145,7 +152,7 @@ def _build_components(config: EngineConfig):
 #: Batch/sensitivity runs mutate injector/tank/grain parameters far more
 #: often than propellants or eps; rebuilding the ~20 s Cantera sweep for
 #: every case would dominate runtime.
-_TABLE_CACHE: Dict[Tuple[str, str, str, float, int, int], TabulatedBackend] = {}
+_TABLE_CACHE: dict[tuple[str, str, str, float, int, int], TabulatedBackend] = {}
 
 
 def _build_cea_table(config: EngineConfig, eps: float) -> TabulatedBackend:
@@ -155,11 +162,11 @@ def _build_cea_table(config: EngineConfig, eps: float) -> TabulatedBackend:
     installed, else Cantera; see :func:`hyprop.cea.get_backend`).
     """
     import numpy as np
+
     from hyprop.cea import get_backend
 
     requested = config.simulation.cea_backend
-    key = (requested, config.fuel.name, config.oxidizer.name, float(eps),
-           _TABLE_OF, _TABLE_PC)
+    key = (requested, config.fuel.name, config.oxidizer.name, float(eps), _TABLE_OF, _TABLE_PC)
     cached = _TABLE_CACHE.get(key)
     if cached is not None:
         return cached
@@ -178,9 +185,22 @@ def _build_cea_table(config: EngineConfig, eps: float) -> TabulatedBackend:
 
 
 def run_simulation(config: EngineConfig) -> SimulationResult:
-    """Run the full transient for one :class:`EngineConfig`."""
-    (fuel, fuel_density, geometry, regression,
-     tank, injector) = _build_components(config)
+    """Run the full transient for one engine (explicit Euler in time).
+
+    Each step: tank blowdown -> injector flow -> chamber pressure from the
+    mass balance (fixed point or Brent) -> regression -> thrust from the
+    tabulated thermochemistry with eta_c* and nozzle efficiencies.
+
+    Args:
+        config: Engine with a defined nozzle.
+
+    Returns:
+        History, events and summary; see :class:`SimulationResult`.
+
+    Raises:
+        ConfigError: If the throat diameter or expansion ratio is missing.
+    """
+    (fuel, fuel_density, geometry, regression, tank, injector) = _build_components(config)
 
     if config.nozzle.throat_diameter_m is None:
         raise ConfigError("nozzle.throat_diameter_m is required for E6 runs.")
@@ -194,7 +214,7 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
 
     divergence = divergence_efficiency(config.nozzle.divergence_half_angle_deg)
     eta_noz = config.nozzle.efficiency
-    cd_nozzle = config.nozzle.discharge_coefficient   # HRAP noz_Cd
+    cd_nozzle = config.nozzle.discharge_coefficient  # HRAP noz_Cd
 
     cea = _build_cea_table(config, eps)
     settings = config.simulation
@@ -202,10 +222,10 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
     grain_length = config.grain.length_m
 
     history = TimeHistory()
-    events: List[Tuple[float, str]] = []
+    events: list[tuple[float, str]] = []
     time_s = 0.0
     web = 0.0
-    pc = 2.0 * ambient                       # ignition seed
+    pc = 2.0 * ambient  # ignition seed
     impulse = 0.0
     lro_logged = False
 
@@ -213,13 +233,12 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
         cstar = cea.query(of, max(pc, 1.2e5), eps).cstar_m_s * eta_cstar
         return mdot_total * cstar / (cd_nozzle * throat_area)
 
-    def chamber_balance(pc_try: float, fluid) -> Tuple[float, dict]:
+    def chamber_balance(pc_try: float, fluid) -> tuple[float, dict]:
         """Return (Pc implied by mass balance, flow dict) at pc_try."""
         mdot_ox = injector.mdot(fluid, pc_try)
         port_area = geometry.port_area(web)
         if port_area <= 0.0 or mdot_ox <= 0.0:
-            return 0.0, dict(mdot_ox=mdot_ox, mdot_fuel=0.0, of=float("inf"),
-                             g_flux=0.0, rdot=0.0)
+            return 0.0, dict(mdot_ox=mdot_ox, mdot_fuel=0.0, of=float("inf"), g_flux=0.0, rdot=0.0)
         g_flux = mdot_ox / port_area
         if regression.flux_basis == "total":
             # inner fixed point on fuel flow (converges in 2-3 passes)
@@ -236,10 +255,11 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
         pc_c = min(max(pc_try, cea.pc_range[0]), cea.pc_range[1])
         cstar = cea.query(of_c, pc_c, eps).cstar_m_s * eta_cstar
         pc_balance = (mdot_ox + mdot_fuel) * cstar / (cd_nozzle * throat_area)
-        return pc_balance, dict(mdot_ox=mdot_ox, mdot_fuel=mdot_fuel, of=of,
-                                g_flux=g_flux, rdot=rdot)
+        return pc_balance, dict(
+            mdot_ox=mdot_ox, mdot_fuel=mdot_fuel, of=of, g_flux=g_flux, rdot=rdot
+        )
 
-    def solve_pc(fluid, pc_seed: float) -> Tuple[float, dict]:
+    def solve_pc(fluid, pc_seed: float) -> tuple[float, dict]:
         if isinstance(tank, ConstantMdotTank):
             # prescribed mdot: Pc follows directly (no injector coupling)
             flow_mdot = tank.mdot_kg_s
@@ -247,8 +267,9 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
             for _ in range(10):
                 _, flow = chamber_balance(pc_direct, fluid)
                 flow["mdot_ox"] = flow_mdot
-                pc_new = pc_from_mdot(flow_mdot + flow["mdot_fuel"],
-                                      min(max(flow["of"], 1.0), 14.0))
+                pc_new = pc_from_mdot(
+                    flow_mdot + flow["mdot_fuel"], min(max(flow["of"], 1.0), 14.0)
+                )
                 if abs(pc_new - pc_direct) < settings.pc_tolerance * pc_direct:
                     return pc_new, flow
                 pc_direct = pc_new
@@ -259,33 +280,37 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
             try:
                 pc_solution = brentq(
                     lambda p: chamber_balance(p, fluid)[0] - p,
-                    lower, upper, xtol=settings.pc_tolerance * upper,
+                    lower,
+                    upper,
+                    xtol=settings.pc_tolerance * upper,
                 )
             except ValueError:
-                pc_solution = lower       # no burn possible (dP ~ 0)
+                pc_solution = lower  # no burn possible (dP ~ 0)
             return pc_solution, chamber_balance(pc_solution, fluid)[1]
         # damped fixed point (HRAP / user's 06, relax=0.5)
         pc_iter = min(pc_seed, fluid.pressure_pa * 0.7)
-        flow: dict = {}
+        flow = {}
         for _ in range(settings.max_iterations):
             pc_new, flow = chamber_balance(pc_iter, fluid)
             if abs(pc_new - pc_iter) < settings.pc_tolerance * max(pc_iter, 1e4):
                 return pc_new, flow
             # clamp into the physical band (oscillation guard)
-            pc_iter = min(max(0.5 * pc_iter + 0.5 * pc_new, 0.2 * ambient),
-                          0.99 * fluid.pressure_pa)
+            pc_iter = min(
+                max(0.5 * pc_iter + 0.5 * pc_new, 0.2 * ambient), 0.99 * fluid.pressure_pa
+            )
         # Fixed point oscillates (stiff injector/throat coupling near
         # flooding); fall back to Brent - the balance residual always
         # brackets a root in [ambient, ~p_tank] since mdot -> 0 there.
         try:
             pc_root = brentq(
                 lambda p: chamber_balance(p, fluid)[0] - p,
-                0.5 * ambient, 0.995 * fluid.pressure_pa,
-                xtol=settings.pc_tolerance * fluid.pressure_pa)
+                0.5 * ambient,
+                0.995 * fluid.pressure_pa,
+                xtol=settings.pc_tolerance * fluid.pressure_pa,
+            )
             return pc_root, chamber_balance(pc_root, fluid)[1]
         except ValueError:
-            _log.warning("Pc solve failed at t=%.3f s (no equilibrium)",
-                         time_s)
+            _log.warning("Pc solve failed at t=%.3f s (no equilibrium)", time_s)
             return pc_iter, flow
 
     _log.info("Transient start: %s", config.name)
@@ -302,34 +327,40 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
             events.append((time_s, "pressure_decay"))
             break
         of_c = min(max(flow["of"], cea.of_range[0]), cea.of_range[1])
-        cea_point = cea.query(of_c, min(max(pc, cea.pc_range[0]),
-                                        cea.pc_range[1]), eps)
+        cea_point = cea.query(of_c, min(max(pc, cea.pc_range[0]), cea.pc_range[1]), eps)
         mdot_total = flow["mdot_ox"] + flow["mdot_fuel"]
         exp = cea_point.equilibrium
         pc_query = cea_point.pc_pa
         # pe scales with Pc at fixed eps; rescale if Pc was clamped to table
         pe = exp.exit_state.pressure_pa * (pc / pc_query)
         c_ideal = ideal_effective_exhaust_velocity(
-            exp.exhaust_velocity_m_s, pe, ambient, eps,
-            cea_point.cstar_m_s, pc, divergence)
-        thrust_n = max(delivered_thrust(mdot_total, c_ideal,
-                                        eta_cstar, eta_noz), 0.0)
+            exp.exhaust_velocity_m_s, pe, ambient, eps, cea_point.cstar_m_s, pc, divergence
+        )
+        thrust_n = max(delivered_thrust(mdot_total, c_ideal, eta_cstar, eta_noz), 0.0)
         impulse += thrust_n * dt
         isp = thrust_n / (mdot_total * G0) if mdot_total > 0 else 0.0
 
         history.record(
-            t=time_s, thrust=thrust_n, pc=pc,
-            p_tank=tank_state.pressure_pa, of=flow["of"] if
-            math.isfinite(flow["of"]) else 0.0,
-            isp=isp, cstar=cea_point.cstar_m_s * eta_cstar,
-            gamma=cea_point.chamber.gamma,          # frozen cp/cv
-            gamma_eq=(cea_point.chamber.gamma_eq
-                      if cea_point.chamber.gamma_eq is not None
-                      else float("nan")),
+            t=time_s,
+            thrust=thrust_n,
+            pc=pc,
+            p_tank=tank_state.pressure_pa,
+            of=flow["of"] if math.isfinite(flow["of"]) else 0.0,
+            isp=isp,
+            cstar=cea_point.cstar_m_s * eta_cstar,
+            gamma=cea_point.chamber.gamma,  # frozen cp/cv
+            gamma_eq=(
+                cea_point.chamber.gamma_eq
+                if cea_point.chamber.gamma_eq is not None
+                else float("nan")
+            ),
             t_c=cea_point.chamber.temperature_k,
-            mdot_ox=flow["mdot_ox"], mdot_fuel=flow["mdot_fuel"],
-            mdot_total=mdot_total, g_flux=flow["g_flux"],
-            rdot=flow["rdot"], web=web,
+            mdot_ox=flow["mdot_ox"],
+            mdot_fuel=flow["mdot_fuel"],
+            mdot_total=mdot_total,
+            g_flux=flow["g_flux"],
+            rdot=flow["rdot"],
+            web=web,
             d_port=geometry.equivalent_port_diameter(web),
             m_fuel=geometry.fuel_mass(web, fuel_density),
             m_ox=tank_state.mass_total_kg,
@@ -347,11 +378,12 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
     else:
         events.append((time_s, "time_budget"))
 
-    result = SimulationResult(history=history, events=events,
-                              thermo_backend=getattr(cea, "name", type(cea).__name__))
+    result = SimulationResult(
+        history=history, events=events, thermo_backend=getattr(cea, "name", type(cea).__name__)
+    )
     if len(history):
         thrust = history["thrust"]
-        mdot = history["mdot_total"]
+        history["mdot_total"]
         result.summary = dict(
             burn_time_s=float(history["t"][-1]),
             total_impulse_ns=float(impulse),
@@ -363,9 +395,15 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
                 + (history["m_ox"][0] - history["m_ox"][-1])
             ),
             isp_mean_s=float(
-                impulse / (G0 * max(
-                    (history["m_fuel"][0] - history["m_fuel"][-1])
-                    + (history["m_ox"][0] - history["m_ox"][-1]), 1e-9))
+                impulse
+                / (
+                    G0
+                    * max(
+                        (history["m_fuel"][0] - history["m_fuel"][-1])
+                        + (history["m_ox"][0] - history["m_ox"][-1]),
+                        1e-9,
+                    )
+                )
             ),
         )
     _log.info("Transient done: %s | events: %s", result.summary, events)

@@ -40,29 +40,29 @@ class PowerLawRegression(RegressionModel):
         self.flux_basis = self.validate_flux_basis(flux_basis)
 
     def rdot(self, g_flux: float, grain_length_m: float) -> float:
+        """Regression rate a * G^n * L^m [m/s] (SI coefficients)."""
         if g_flux < 0.0:
             raise ValueError("Mass flux must be non-negative.")
         if g_flux == 0.0:
             return 0.0
-        length_term = grain_length_m ** self.m if self.m != 0.0 else 1.0
+        length_term = grain_length_m**self.m if self.m != 0.0 else 1.0
         return self.a * g_flux**self.n * length_term
 
     # ------------------------------------------------------- constructors
     @classmethod
-    def from_entry(cls, entry) -> "PowerLawRegression":
+    def from_entry(cls, entry) -> PowerLawRegression:
         """Build from a database :class:`~hyprop.data.RegressionEntry`."""
-        return cls(a=entry.a, n=entry.n, m=entry.m,
-                   flux_basis=entry.flux_basis)
+        return cls(a=entry.a, n=entry.n, m=entry.m, flux_basis=entry.flux_basis)
 
     @classmethod
-    def from_spec(cls, spec) -> "PowerLawRegression":
+    def from_spec(cls, spec) -> PowerLawRegression:
         """Build from a config :class:`~hyprop.core.config.RegressionSpec`."""
         if spec.a is None or spec.n is None:
-            raise ConfigError(
-                "RegressionSpec override requires both 'a' and 'n'."
-            )
+            raise ConfigError("RegressionSpec override requires both 'a' and 'n'.")
         return cls(a=spec.a, n=spec.n, m=spec.m, flux_basis=spec.flux_basis)
 
-    def __repr__(self) -> str:            # pragma: no cover
-        return (f"PowerLawRegression(a={self.a:.3e}, n={self.n}, "
-                f"m={self.m}, flux_basis='{self.flux_basis}')")
+    def __repr__(self) -> str:  # pragma: no cover
+        return (
+            f"PowerLawRegression(a={self.a:.3e}, n={self.n}, "
+            f"m={self.m}, flux_basis='{self.flux_basis}')"
+        )

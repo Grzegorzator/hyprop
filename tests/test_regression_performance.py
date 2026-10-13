@@ -1,7 +1,5 @@
 """Tests for hyprop.regression, hyprop.nozzle.losses, hyprop.performance."""
 
-import math
-
 import pytest
 
 from hyprop.core.constants import G0
@@ -30,9 +28,7 @@ def test_power_law_from_database_entry():
     entry = load_fuel("hdpe").regression_for("n2o")[0]
     law = PowerLawRegression.from_entry(entry)
     assert law.flux_basis == "oxidizer"
-    assert law.rdot(200.0, 0.3) == pytest.approx(
-        1.04e-4 * 200.0**0.352, rel=1e-12
-    )
+    assert law.rdot(200.0, 0.3) == pytest.approx(1.04e-4 * 200.0**0.352, rel=1e-12)
 
 
 def test_power_law_length_exponent():
@@ -64,9 +60,7 @@ def test_divergence_efficiency_15_deg():
 
 
 def test_nozzle_efficiency_combines():
-    assert nozzle_efficiency(15.0, 0.98) == pytest.approx(
-        0.9830 * 0.98, abs=1e-4
-    )
+    assert nozzle_efficiency(15.0, 0.98) == pytest.approx(0.9830 * 0.98, abs=1e-4)
     with pytest.raises(ConfigError):
         nozzle_efficiency(15.0, 1.5)
 
@@ -85,9 +79,7 @@ def test_thrust_and_identities():
 
 
 def test_specific_impulse():
-    assert specific_impulse(1000.0, 0.5) == pytest.approx(
-        1000.0 / (0.5 * G0), rel=1e-12
-    )
+    assert specific_impulse(1000.0, 0.5) == pytest.approx(1000.0 / (0.5 * G0), rel=1e-12)
 
 
 def test_efficiency_ratio():

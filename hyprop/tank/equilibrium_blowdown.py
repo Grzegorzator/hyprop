@@ -35,11 +35,12 @@ from __future__ import annotations
 
 from scipy.optimize import brentq
 
+from hyprop.core.constants import R_UNIVERSAL
 from hyprop.core.exceptions import ConfigError, ConvergenceError
 from hyprop.core.logging import get_logger
 from hyprop.core.registry import register_model
 from hyprop.tank.base import FluidState, TankModel, TankState
-from hyprop.tank.n2o_properties import get_n2o_properties
+from hyprop.tank.n2o_properties import MOLAR_MASS, get_n2o_properties
 
 _log = get_logger(__name__)
 
@@ -47,9 +48,6 @@ _log = get_logger(__name__)
 GAMMA_N2O_VAPOR = 1.27
 
 #: Specific gas constant of N2O [J/(kg*K)] = R_u / M.
-from hyprop.core.constants import R_UNIVERSAL
-from hyprop.tank.n2o_properties import MOLAR_MASS
-
 R_N2O = R_UNIVERSAL / MOLAR_MASS
 
 
@@ -77,25 +75,20 @@ class EquilibriumBlowdownTank(TankModel):
         #   m_l/rho_l + m_v/rho_v = V,  m_l + m_v = m
         rho_l = self._props.rho_liquid(temperature_k)
         rho_v = self._props.rho_vapor(temperature_k)
-        m_vap = (volume_m3 - oxidizer_mass_kg / rho_l) / (
-            1.0 / rho_v - 1.0 / rho_l
-        )
+        m_vap = (volume_m3 - oxidizer_mass_kg / rho_l) / (1.0 / rho_v - 1.0 / rho_l)
         if m_vap < 0.0:
-            raise ConfigError(
-                "Oxidizer mass exceeds liquid-full tank (overfilled)."
-            )
+            raise ConfigError("Oxidizer mass exceeds liquid-full tank (overfilled).")
         m_liq = oxidizer_mass_kg - m_vap
         if m_liq <= 0.0:
-            raise ConfigError(
-                "No liquid at the initial state (tank too large / too warm)."
-            )
+            raise ConfigError("No liquid at the initial state (tank too large / too warm).")
         self._m_liq = m_liq
         self._m_vap = m_vap
         # Vapour-phase (post-LRO) reference state, set at transition:
-        self._lro_reference = None
+        self._lro_reference: tuple[float, float, float] | None = None
 
     # ------------------------------------------------------------ public
     def state(self) -> TankState:
+        """Current tank state (saturated while liquid remains)."""
         if self._m_liq > 0.0:
             pressure = self._props.psat(self._temperature)
             fluid = self._fluid_state(pressure)
@@ -111,6 +104,7 @@ class EquilibriumBlowdownTank(TankModel):
         )
 
     def step(self, dt: float, mdot_out: float) -> TankState:
+        """Advance by ``dt`` [s] with outflow ``mdot_out`` [kg/s] and return the new state."""
         if dt <= 0.0 or mdot_out < 0.0:
             raise ValueError("Require dt > 0 and mdot_out >= 0.")
         dm = mdot_out * dt
@@ -150,9 +144,7 @@ class EquilibriumBlowdownTank(TankModel):
             t_new = max(t_new, 184.0)
             rho_l = props.rho_liquid(t_new)
             rho_v = props.rho_vapor(t_new)
-            return (
-                (m_liq - dm_v) / rho_l + (m_vap + dm_v) / rho_v - self._volume
-            )
+            return (m_liq - dm_v) / rho_l + (m_vap + dm_v) / rho_v - self._volume
 
         upper = 0.5 * m_liq
         try:
@@ -164,9 +156,7 @@ class EquilibriumBlowdownTank(TankModel):
             ) from exc
         self._m_liq = m_liq - dm_v
         self._m_vap = m_vap + dm_v
-        self._temperature = temperature - h_vap * dm_v / (
-            max(self._m_liq, 1e-9) * cp_liq
-        )
+        self._temperature = temperature - h_vap * dm_v / (max(self._m_liq, 1e-9) * cp_liq)
         if self._m_liq <= 0.0:
             self._lro_reference = (
                 self._props.psat(self._temperature),
@@ -176,7 +166,7 @@ class EquilibriumBlowdownTank(TankModel):
 
     def _fluid_state(self, pressure: float) -> FluidState:
         extras = {}
-        if hasattr(self._props, "h_liquid"):     # CoolProp backend
+        if hasattr(self._props, "h_liquid"):  # CoolProp backend
             extras = dict(
                 enthalpy_j_kg=self._props.h_liquid(self._temperature),
                 entropy_j_kg_k=self._props.s_liquid(self._temperature),
@@ -185,13 +175,13 @@ class EquilibriumBlowdownTank(TankModel):
             pressure_pa=pressure,
             temperature_k=self._temperature,
             density_kg_m3=self._props.rho_liquid(self._temperature),
-            vapor_pressure_pa=pressure,          # saturated: p = p_v
+            vapor_pressure_pa=pressure,  # saturated: p = p_v
             phase="liquid",
             **extras,
         )
 
     def _vapor_state(self):
-        if self._lro_reference is None:          # started without liquid
+        if self._lro_reference is None:  # started without liquid
             self._lro_reference = (
                 self._props.psat(self._temperature),
                 self._temperature,

@@ -19,16 +19,32 @@ experimentally before design use.
 
 ## Install
 
+Python >= 3.11, managed with [uv](https://docs.astral.sh/uv/) (`uv.lock`
+pins the tested versions; CI runs Python 3.11 and 3.12):
+
 ```bash
 git clone https://github.com/Grzegorzator/hyprop.git
 cd hyprop
-pip install -e .[dev,cantera,props,export]
-pytest
+uv sync --extra cantera --extra props --extra export --extra opt
+uv run pytest
 ```
 
-Optional: `pip install rocketcea` (NASA CEA; needs a Fortran compiler),
-`pip install cea` (NASA's CEA package, used by `validation/`) and
-`pip install -e .[opt]` (pymoo NSGA-II, SALib Morris/Sobol).
+`uv sync` installs the `dev` dependency group (pytest, hypothesis, ruff,
+mypy). Extras: `cantera`, `props` (CoolProp), `export` (openpyxl, jinja2),
+`opt` (pymoo NSGA-II, SALib), `cea` (RocketCEA; needs a Fortran compiler),
+`validation` (NASA's `cea` package, used by `validation/`).
+Without uv: `pip install -e ".[cantera,props,export]" pytest hypothesis`.
+
+## Development
+
+```bash
+uv run ruff check . && uv run ruff format --check .
+uv run mypy hyprop validation tests examples
+uv run pytest            # incl. golden tests; -m "not slow" skips them
+```
+
+All three run in GitHub Actions on every push and pull request. Public
+API docstrings follow the Google style (enforced by ruff `D` for `hyprop/`).
 
 ## Physical conventions (v0.2)
 
@@ -60,7 +76,8 @@ Optional: `pip install rocketcea` (NASA CEA; needs a Fortran compiler),
 
 ## Validation (summary; full table in docs/VALIDATION.md)
 
-Reproduced with `python -m validation.run_all`.
+Reproduced with `uv run --extra validation python -m validation.run_all`
+(optional data paths: `validation/README.md`).
 
 * **HRAP v1.06 benchmark** (prusak_v2, PE/N2O, HRAP HDPE preset with
   rho 920, liquid phase): mean deviations Pc 1.4 %, tank pressure 0.5 %,
@@ -94,8 +111,8 @@ for accepting intended changes: [`tests/golden/README.md`](tests/golden/README.m
 |---|---|
 | `examples/sizing_pe_05kN.py` | PE (LDPE)/N2O: It = 3501 Ns, Pc_peak 36.0 bar, LRO 7.11 s, Isp 184 s (eta_c* 0.90) |
 | `examples/rop_pe_05kN.py` | time averages understate thrust by 51 % and Pc by 47 % vs impulse-weighted; liquid phase delivers 92.8 % of It in 43.1 % of burn time |
-| `examples/size_pe_3km.py` | `api.size(500 N, 4000 Ns, 3 km)`, LDPE: 8 iterations, F_iw 498 N, It 4030 Ns, Dt 12.0 mm, eps 5.00 adapted at 1000 m |
-| `examples/trajectory_pe_3km.py` | 1-DOF, m_dry 7 kg (assumed), Cd 0.55, D 0.10 m: apogee 3736 m |
+| `examples/size_pe_3km.py` | `api.size(500 N, 4000 Ns, 3 km)`, LDPE: 8 iterations, F_iw 497 N, It 4030 Ns, O/F_iw 7.90 (target = Isp-optimal 7.93), grain 28.2/43.3 mm x 390 mm, Dt 11.9 mm, eps 5.67 adapted at 1000 m |
+| `examples/trajectory_pe_3km.py` | illustrative only (rocket mass not known): 1-DOF, m_dry 7 kg, Cd 0.55, D 0.10 m guessed; apogee 3761 m |
 | `examples/benchmark_prusak_v2.py` | HRAP comparison (needs `HYPROP_HRAP_DIR`) |
 | `examples/sensitivity_pe.py`, `examples/report_pe_3km.py` | OAT sensitivity; CSV/XLSX/JSON export + LaTeX report |
 
@@ -112,8 +129,14 @@ print(result.summary["total_impulse_ns"], result.thermo_backend)
 
 cea = get_backend("cantera", fuel="ldpe", oxidizer="n2o")
 r = cea.query(of=6.3, pc=32e5, eps=5.0)
-print(r.chamber.temperature_k, r.chamber.gamma, r.chamber.gamma_eq,
-      r.cstar_m_s, r.isp_s(101325.0), r.isp_s(101325.0, mode="frozen"))
+print(
+    r.chamber.temperature_k,
+    r.chamber.gamma,
+    r.chamber.gamma_eq,
+    r.cstar_m_s,
+    r.isp_s(101325.0),
+    r.isp_s(101325.0, mode="frozen"),
+)
 ```
 
 ## Layout
@@ -133,7 +156,7 @@ hyprop/sizing/      inverse sizing api.size
 hyprop/nozzle/      nozzle sizing and losses
 hyprop/batch/, analysis/, optimization/, export/, database/
 validation/         validation suite -> docs/VALIDATION.md
-tests/              pytest
+tests/              pytest (unit, Hypothesis invariants, golden)
 ```
 
 ## Authors

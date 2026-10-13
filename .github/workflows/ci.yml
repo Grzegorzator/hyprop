@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --locked --extra cantera --extra props --extra export --extra opt
+      - name: ruff
+        run: |
+          uv run --locked ruff check .
+          uv run --locked ruff format --check .
+      - name: mypy
+        run: uv run --locked mypy hyprop validation tests examples
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # RocketCEA needs a Fortran toolchain and is skipped here (its tests
+      # use importorskip); the golden tests pin the Cantera backend.
+      - run: uv sync --locked --extra cantera --extra props --extra export --extra opt
+      - name: pytest (incl. golden tests)
+        run: uv run --locked pytest -q -rs

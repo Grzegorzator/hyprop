@@ -21,7 +21,6 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional, Union
 
 from hyprop.core.config import EngineConfig
 from hyprop.core.logging import get_logger
@@ -47,8 +46,7 @@ def _fmt(value, digits=3):
 
 
 def _tex_escape(text: str) -> str:
-    return (str(text).replace("_", r"\_").replace("%", r"\%")
-            .replace("&", r"\&").replace("#", r"\#"))
+    return str(text).replace("_", r"\_").replace("%", r"\%").replace("&", r"\&").replace("#", r"\#")
 
 
 def _num(value) -> str:
@@ -61,32 +59,43 @@ def _num(value) -> str:
 def _df_to_tabular(df, caption: str) -> str:
     """Hand-rolled booktabs table (no pandas Styler / jinja2 needed)."""
     columns = list(df.columns)
-    header = " & ".join([_tex_escape(df.index.name or "")]
-                        + [_tex_escape(c) for c in columns])
+    header = " & ".join([_tex_escape(df.index.name or "")] + [_tex_escape(c) for c in columns])
     lines = [header + r" \\", r"\midrule"]
     for index, row in df.iterrows():
         cells = [_tex_escape(index)] + [_num(row[c]) for c in columns]
         lines.append(" & ".join(cells) + r" \\")
     body = "\n".join(lines)
     spec = "l" + "r" * len(columns)
-    return (f"\\begin{{table}}[h!]\\centering\\small\n"
-            f"\\caption{{{caption}}}\n"
-            f"\\begin{{tabular}}{{{spec}}}\\toprule\n{body}\n"
-            f"\\bottomrule\\end{{tabular}}\\end{{table}}\n")
+    return (
+        f"\\begin{{table}}[h!]\\centering\\small\n"
+        f"\\caption{{{caption}}}\n"
+        f"\\begin{{tabular}}{{{spec}}}\\toprule\n{body}\n"
+        f"\\bottomrule\\end{{tabular}}\\end{{table}}\n"
+    )
 
 
 #: Channels shown in the ROP comparison table (full data goes to XLSX).
-_ROP_ROWS = (("thrust", "F [N]", 1.0), ("pc", "Pc [bar]", 1e-5),
-             ("of", "O/F [-]", 1.0), ("isp", "Isp [s]", 1.0),
-             ("cstar", "c* [m/s]", 1.0), ("t_c", "Tc [K]", 1.0),
-             ("mdot_ox", "mdot_ox [kg/s]", 1.0),
-             ("mdot_fuel", "mdot_f [kg/s]", 1.0))
+_ROP_ROWS = (
+    ("thrust", "F [N]", 1.0),
+    ("pc", "Pc [bar]", 1e-5),
+    ("of", "O/F [-]", 1.0),
+    ("isp", "Isp [s]", 1.0),
+    ("cstar", "c* [m/s]", 1.0),
+    ("t_c", "Tc [K]", 1.0),
+    ("mdot_ox", "mdot_ox [kg/s]", 1.0),
+    ("mdot_fuel", "mdot_f [kg/s]", 1.0),
+)
 
 
 #: Short column headers for the ROP table (page-width friendly).
-_POINT_LABELS = {"peak_performance": "peak", "impulse_weighted": "imp-wtd",
-                 "heat_load": "heat", "mass_flow": "mdot-wtd",
-                 "median_impulse": "median", "time_average": "time-avg"}
+_POINT_LABELS = {
+    "peak_performance": "peak",
+    "impulse_weighted": "imp-wtd",
+    "heat_load": "heat",
+    "mass_flow": "mdot-wtd",
+    "median_impulse": "median",
+    "time_average": "time-avg",
+}
 
 
 def _port_text(port: dict) -> str:
@@ -95,37 +104,54 @@ def _port_text(port: dict) -> str:
     for key, value in port.items():
         label = _tex_escape(key.replace("_m", "").replace("_", " "))
         if isinstance(value, (int, float)) and key.endswith("_m"):
-            parts.append(f"{label} {value*1e3:.1f} mm")
+            parts.append(f"{label} {value * 1e3:.1f} mm")
         else:
             parts.append(f"{label} {_tex_escape(value)}")
     return "; ".join(parts) if parts else "none"
 
 
-def _rop_compact(rop) -> "object":
+def _rop_compact(rop) -> object:
     """Key channels x points (transposed: fits an A4 page)."""
     import pandas as pd
 
     full = rop.comparison_table()
     out = {}
-    for column in full.index:                     # point names
+    for column in full.index:  # point names
         out[_POINT_LABELS.get(column, column)] = {
             label: full.loc[column, ch] * scale
-            for ch, label, scale in _ROP_ROWS if ch in full.columns
+            for ch, label, scale in _ROP_ROWS
+            if ch in full.columns
         }
     frame = pd.DataFrame(out)
     frame.index.name = "channel"
     return frame
 
 
-def _phases_compact(rop) -> "object":
+def _phases_compact(rop) -> object:
     frame = rop.phases_table().set_index("phase")
-    frame = frame[["t_start_s", "t_end_s", "impulse_ns", "impulse_share",
-                   "time_share", "mean_thrust", "mean_pc", "mean_of"]]
-    frame = frame.rename(columns={
-        "t_start_s": "t0 [s]", "t_end_s": "t1 [s]",
-        "impulse_ns": "It [Ns]", "impulse_share": "It share",
-        "time_share": "t share", "mean_thrust": "F [N]",
-        "mean_of": "O/F"})
+    frame = frame[
+        [
+            "t_start_s",
+            "t_end_s",
+            "impulse_ns",
+            "impulse_share",
+            "time_share",
+            "mean_thrust",
+            "mean_pc",
+            "mean_of",
+        ]
+    ]
+    frame = frame.rename(
+        columns={
+            "t_start_s": "t0 [s]",
+            "t_end_s": "t1 [s]",
+            "impulse_ns": "It [Ns]",
+            "impulse_share": "It share",
+            "time_share": "t share",
+            "mean_thrust": "F [N]",
+            "mean_of": "O/F",
+        }
+    )
     frame["mean_pc"] = frame["mean_pc"] * 1e-5
     frame = frame.rename(columns={"mean_pc": "Pc [bar]"})
     return frame
@@ -135,8 +161,8 @@ def generate_report(
     config: EngineConfig,
     result,
     rop: ROPReport,
-    path: Union[str, Path],
-    figures: Optional[list] = None,
+    path: str | Path,
+    figures: list | None = None,
     compile_pdf: bool = True,
 ) -> Path:
     """Write the .tex report (and PDF when pdflatex is available)."""
@@ -149,9 +175,14 @@ def generate_report(
     parts = [_PREAMBLE % dict(title=config.name.replace("_", r"\_"))]
     add = parts.append
 
-    apogee_txt = ("" if config.mission.apogee_m is None else
-                  f"mission apogee target: {_fmt(config.mission.apogee_m)} m; ")
-    add(r"\section{Mission Requirements}" "\n"
+    apogee_txt = (
+        ""
+        if config.mission.apogee_m is None
+        else f"mission apogee target: {_fmt(config.mission.apogee_m)} m; "
+    )
+    add(
+        r"\section{Mission Requirements}"
+        "\n"
         f"Required thrust: {_fmt(config.mission.thrust_n)} N; "
         f"total impulse: {_fmt(config.mission.total_impulse_ns)} N\\,s; "
         f"{apogee_txt}"
@@ -159,73 +190,107 @@ def generate_report(
         f"{_fmt(config.mission.design_altitude_m)} m "
         "(single fixed nozzle: optimum expansion is set at a fraction of "
         "the apogee, not at the apogee itself); "
-        f"safety factor: {config.mission.safety_factor}.\n")
+        f"safety factor: {config.mission.safety_factor}.\n"
+    )
 
-    add(r"\section{Inputs and Assumptions}" "\n"
+    rho_f = config.fuel.density_kg_m3
+    rho_txt = "" if rho_f is None else f", density {rho_f:.0f} kg/m3"
+    add(
+        r"\section{Inputs and Assumptions}"
+        "\n"
         f"Oxidizer: {config.oxidizer.name.upper()} at "
         f"{_fmt(config.oxidizer.temperature_k)} K (self-pressurized). "
-        f"Fuel: {config.fuel.name.upper()}"
-        f"{'' if config.fuel.density_kg_m3 is None else f', density {config.fuel.density_kg_m3:.0f} kg/m3'}. "
+        f"Fuel: {config.fuel.name.upper()}{rho_txt}. "
         f"Injector: {config.injector.orifice_count}$\\times$"
-        f"{_fmt((config.injector.orifice_diameter_m or 0)*1e3)} mm, "
+        f"{_fmt((config.injector.orifice_diameter_m or 0) * 1e3)} mm, "
         f"$C_d$={config.injector.discharge_coefficient} "
         f"({config.injector.model.upper()}). "
         f"Efficiencies: $\\eta_{{c^*}}$={config.efficiencies.eta_cstar}, "
         f"nozzle extra $\\eta$={config.nozzle.efficiency}, "
         f"divergence half-angle {config.nozzle.divergence_half_angle_deg}"
-        r"$^\circ$." "\n")
+        r"$^\circ$."
+        "\n"
+    )
 
-    add(r"\section{Grain and Chamber Geometry}" "\n"
+    add(
+        r"\section{Grain and Chamber Geometry}"
+        "\n"
         f"Geometry: {config.grain.geometry}; length "
-        f"{_fmt(config.grain.length_m*1e3)} mm; outer diameter "
-        f"{_fmt(config.grain.outer_diameter_m*1e3)} mm; port parameters: "
+        f"{_fmt(config.grain.length_m * 1e3)} mm; outer diameter "
+        f"{_fmt(config.grain.outer_diameter_m * 1e3)} mm; port parameters: "
         f"{_port_text(config.grain.port)}. Tank: "
-        f"{_fmt((config.tank.volume_m3 or 0)*1e3)} L, "
-        f"{_fmt(config.tank.oxidizer_mass_kg)} kg oxidizer.\n")
+        f"{_fmt((config.tank.volume_m3 or 0) * 1e3)} L, "
+        f"{_fmt(config.tank.oxidizer_mass_kg)} kg oxidizer.\n"
+    )
 
-    add(r"\section{Transient Simulation}" "\n"
+    add(
+        r"\section{Transient Simulation}"
+        "\n"
         f"Burn time {_fmt(s.get('burn_time_s'))} s; total impulse "
         f"{_fmt(s.get('total_impulse_ns'))} N\\,s; peak thrust "
         f"{_fmt(s.get('peak_thrust_n'))} N; peak chamber pressure "
-        f"{_fmt(s.get('peak_pc_pa', 0)/1e5)} bar; propellant used "
+        f"{_fmt(s.get('peak_pc_pa', 0) / 1e5)} bar; propellant used "
         f"{_fmt(s.get('propellant_used_kg'))} kg; mean delivered "
         f"$I_{{sp}}$ {_fmt(s.get('isp_mean_s'))} s. Events: "
-        + "; ".join(f"{name.replace('_',' ')} at {t:.2f} s"
-                    for t, name in result.events) + ".\n")
+        + "; ".join(f"{name.replace('_', ' ')} at {t:.2f} s" for t, name in result.events)
+        + ".\n"
+    )
 
-    add(r"\section{Representative Operating Points}" "\n"
+    add(
+        r"\section{Representative Operating Points}"
+        "\n"
         "The plain time average is misleading for blowdown motors: "
         f"it understates thrust by "
-        f"{100*(1-ta['thrust']/iw['thrust']):.0f}\\% and chamber pressure "
-        f"by {100*(1-ta['pc']/iw['pc']):.0f}\\% versus the impulse-weighted "
+        f"{100 * (1 - ta['thrust'] / iw['thrust']):.0f}\\% and chamber pressure "
+        f"by {100 * (1 - ta['pc'] / iw['pc']):.0f}\\% versus the impulse-weighted "
         "point. All design modules therefore use the weighted points "
-        "below.\n")
-    add(_df_to_tabular(_rop_compact(rop), "Representative operating "
-        "points vs plain time average (key channels; full data in the "
-        "XLSX export)."))
-    add(_df_to_tabular(_phases_compact(rop),
-                       "Burn phases: liquid / transition / gas."))
-    add("Time share needed to deliver impulse fractions: "
-        + ", ".join(f"{f*100:.0f}\\% of $I_t$ in {v*100:.1f}\\% "
-                    "of burn time"
-                    for f, v in rop.time_shares.items()) + ".\n")
-    add(r"\subsection{Recommendations}\begin{itemize}" "\n"
+        "below.\n"
+    )
+    add(
+        _df_to_tabular(
+            _rop_compact(rop),
+            "Representative operating "
+            "points vs plain time average (key channels; full data in the "
+            "XLSX export).",
+        )
+    )
+    add(_df_to_tabular(_phases_compact(rop), "Burn phases: liquid / transition / gas."))
+    add(
+        "Time share needed to deliver impulse fractions: "
+        + ", ".join(
+            f"{f * 100:.0f}\\% of $I_t$ in {v * 100:.1f}\\% of burn time"
+            for f, v in rop.time_shares.items()
+        )
+        + ".\n"
+    )
+    add(
+        r"\subsection{Recommendations}\begin{itemize}"
+        "\n"
         r"\item Nozzle design and reported performance: "
         r"\textbf{impulse-weighted} point (each instant weighted by its "
-        "contribution to total impulse)." "\n"
+        "contribution to total impulse)."
+        "\n"
         r"\item Thermal/erosion analysis: \textbf{heat-load} point "
-        r"(maximum of the Bartz $\sim P_c^{0.8}$ proxy)." "\n"
+        r"(maximum of the Bartz $\sim P_c^{0.8}$ proxy)."
+        "\n"
         r"\item Structural sizing and materials: \textbf{peak-performance} "
-        f"envelope ($P_c$={pk['pc_max']/1e5:.1f} bar, "
-        f"$T_c$={pk['t_c_max']:.0f} K)." "\n"
+        f"envelope ($P_c$={pk['pc_max'] / 1e5:.1f} bar, "
+        f"$T_c$={pk['t_c_max']:.0f} K)."
+        "\n"
         r"\item Injector and feed system: \textbf{mass-flow-weighted} "
-        "point." r"\end{itemize}" "\n")
+        "point."
+        r"\end{itemize}"
+        "\n"
+    )
 
-    add(r"\section{Nozzle and Performance}" "\n"
-        f"Throat diameter {_fmt((config.nozzle.throat_diameter_m or 0)*1e3)}"
+    add(
+        r"\section{Nozzle and Performance}"
+        "\n"
+        f"Throat diameter {_fmt((config.nozzle.throat_diameter_m or 0) * 1e3)}"
         f" mm; expansion ratio {_fmt(config.nozzle.expansion_ratio)}; "
         f"impulse-weighted $I_{{sp}}$ {_fmt(iw['isp'])} s, "
-        f"$c^*$ {_fmt(iw['cstar'])} m/s, O/F {_fmt(iw['of'])}.\n")
+        f"$c^*$ {_fmt(iw['cstar'])} m/s, O/F {_fmt(iw['of'])}.\n"
+    )
 
     if figures:
         added_any = False
@@ -236,19 +301,21 @@ def generate_report(
                 continue
             target = path.parent / source.name
             if source.resolve() != target.resolve():
-                shutil.copy(source, target)     # pdflatex needs it locally
+                shutil.copy(source, target)  # pdflatex needs it locally
             if not added_any:
                 add(r"\section{Figures}" "\n")
                 added_any = True
-            add(f"\\includegraphics[width=\\textwidth]"
-                f"{{{source.name}}}\n\n")
+            add(f"\\includegraphics[width=\\textwidth]{{{source.name}}}\n\n")
 
-    add(r"\section{Validation Note}" "\n"
+    add(
+        r"\section{Validation Note}"
+        "\n"
         "Models validated against NASA-CEA-class thermochemistry "
         "(Cantera cross-check), HRAP transient benchmark (prusak\\_v2) "
         "and ESDU 91022/CoolProp N2O properties; see repository README. "
         "Empirical coefficients (a, n, $C_d$, $\\eta$) require "
-        "confirmation by fire tests before design freeze.\n")
+        "confirmation by fire tests before design freeze.\n"
+    )
     add(r"\end{document}")
 
     path.write_text("".join(parts), encoding="utf-8")
@@ -257,7 +324,9 @@ def generate_report(
     if compile_pdf and shutil.which("pdflatex"):
         subprocess.run(
             ["pdflatex", "-interaction=nonstopmode", path.name],
-            cwd=path.parent, capture_output=True, check=False,
+            cwd=path.parent,
+            capture_output=True,
+            check=False,
         )
         pdf = path.with_suffix(".pdf")
         if pdf.exists():

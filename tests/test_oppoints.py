@@ -24,14 +24,19 @@ def _synthetic() -> SimulationResult:
     for t in np.arange(0.0, 12.0, 0.01):
         decay = 1.0 if t < 8.0 else max(1.0 - (t - 8.0) / 4.0, 0.0)
         history.record(
-            t=t, thrust=500.0 * decay, pc=30e5 * decay,
+            t=t,
+            thrust=500.0 * decay,
+            pc=30e5 * decay,
             of=7.0 * (1.0 if t < 8.0 else 0.5),
-            isp=200.0 * decay, cstar=1500.0, gamma=1.25, t_c=3300.0 * decay,
-            mdot_ox=0.20 * decay, mdot_fuel=0.03 * decay,
+            isp=200.0 * decay,
+            cstar=1500.0,
+            gamma=1.25,
+            t_c=3300.0 * decay,
+            mdot_ox=0.20 * decay,
+            mdot_fuel=0.03 * decay,
             mdot_total=0.23 * decay,
         )
-    return SimulationResult(history=history,
-                            events=[(8.0, "liquid_runout")])
+    return SimulationResult(history=history, events=[(8.0, "liquid_runout")])
 
 
 @pytest.fixture(scope="module")
@@ -45,14 +50,14 @@ def test_thrust_weighted_exceeds_time_average(result):
     f_thrust = weighted_average(h, "thrust", "thrust")
     # time average diluted by the tail; impulse-weighted stays near 500
     assert f_time < f_thrust
-    assert f_thrust == pytest.approx(466.7, rel=0.01)   # int(F^2)/int(F)
+    assert f_thrust == pytest.approx(466.7, rel=0.01)  # int(F^2)/int(F)
     assert f_time == pytest.approx(5000.0 / 12.0, rel=0.01)
 
 
 def test_custom_weight_callable(result):
     h = result.history
     value = weighted_average(h, "pc", lambda t, hh: (t < 8.0).astype(float))
-    assert value == pytest.approx(30e5, rel=1e-6)       # liquid-only mean
+    assert value == pytest.approx(30e5, rel=1e-6)  # liquid-only mean
 
 
 def test_unknown_weighting_raises(result):
@@ -84,8 +89,11 @@ def test_phase_split_shares(result):
 def test_full_report(result):
     report = analyze(result)
     assert set(report.points) == {
-        "peak_performance", "impulse_weighted", "heat_load",
-        "mass_flow", "median_impulse",
+        "peak_performance",
+        "impulse_weighted",
+        "heat_load",
+        "mass_flow",
+        "median_impulse",
     }
     assert report.point("peak_performance")["pc_max"] == pytest.approx(30e5)
     assert report.for_module("nozzle_design").name == "impulse_weighted"
@@ -96,9 +104,8 @@ def test_full_report(result):
     assert report.time_shares[0.50] == pytest.approx(5.0 / 12.0, abs=0.01)
     assert len(report.percentiles) == 7
     times = [p.time_s for p in report.percentiles]
-    assert times == sorted(times)                       # monotone
+    assert times == sorted(times)  # monotone
     table = report.comparison_table()
     assert "time_average" in table.index
-    assert table.loc["impulse_weighted", "thrust"] > \
-        table.loc["time_average", "thrust"]
+    assert table.loc["impulse_weighted", "thrust"] > table.loc["time_average", "thrust"]
     assert len(report.phases_table()) == 3

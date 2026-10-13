@@ -38,3 +38,10 @@ python tests/golden/regenerate.py            # or: ... regenerate.py pe_05kN
 
 Commit the JSON diff together with the change and explain in the message why
 the numbers moved. Quick test run without golden tests: `pytest -m "not slow"`.
+
+## Change log
+
+| Commit | Case | Why the numbers moved |
+|---|---|---|
+| fix(sizing): Isp-optimal O/F from the backend | size_3km | first-guess O/F 0.85 x 8.2 = 6.97 -> 0.85 x 7.93 = 6.74 (computed optimum); O/F_iw 5.24 -> 5.07, grain +3.3 %, F_iw/It unchanged within 0.1 % |
+| feat(sizing): hold O/F_iw at the target | size_3km | target O/F_iw = Isp-optimal 7.93 now enforced via grain length: O/F_iw 5.07 -> 7.90, grain length 0.60 -> 0.39 m, Isp_iw 195 -> 205 s, eps 4.97 -> 5.67; F_iw, It unchanged |
