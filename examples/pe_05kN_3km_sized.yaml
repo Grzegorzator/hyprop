@@ -1,5 +1,5 @@
 version: '0.1'
-name: sized_hdpe_500N
+name: sized_ldpe_500N
 mission:
   thrust_n: 500.0
   total_impulse_ns: 4000.0
@@ -15,29 +15,29 @@ oxidizer:
   tank_pressure_pa: null
   overrides: {}
 fuel:
-  name: hdpe
+  name: ldpe
   density_kg_m3: null
   regression: null
   overrides: {}
 grain:
   geometry: cylindrical
-  length_m: 0.5307209867573129
+  length_m: 0.5640508331802276
   outer_diameter_m: 0.04313636125423799
   port:
-    initial_diameter_m: 0.027605514591323155
+    initial_diameter_m: 0.02759812238274835
 tank:
   model: equilibrium_blowdown
-  volume_m3: 0.002493676865916412
-  oxidizer_mass_kg: 1.7263287856460483
+  volume_m3: 0.002504168751880515
+  oxidizer_mass_kg: 1.7335921343994918
   parameters: {}
 injector:
   model: spi
   discharge_coefficient: 0.6
   orifice_count: 4
-  orifice_diameter_m: 0.0017074293460915297
+  orifice_diameter_m: 0.0017179824636786958
 nozzle:
-  throat_diameter_m: 0.011996014039059743
-  expansion_ratio: 5.025237883338403
+  throat_diameter_m: 0.012000729531584023
+  expansion_ratio: 4.999536093498622
   divergence_half_angle_deg: 15.0
   efficiency: 0.9673
   discharge_coefficient: 0.98

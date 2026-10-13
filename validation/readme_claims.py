@@ -12,10 +12,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import math
-import subprocess
 import sys
-import tempfile
-from pathlib import Path
 from typing import List
 
 import numpy as np
@@ -61,15 +58,15 @@ def hrap_benchmark() -> List[Row]:
         b = np.interp(tg, ref["Time (s)"], ref[col_r])
         return float(100 * np.mean(np.abs(a - b)) / np.mean(np.abs(b)))
 
-    claims = [("Pc", "pc", "Combustion Chamber Pressure (kPa)", 1e3, 1.7),
-              ("p_tank", "p_tank", "Oxidizer Tank Pressure (kPa)", 1e3, 0.6),
-              ("O/F", "of", "Oxidizer to Fuel Ratio", 1.0, 1.0),
-              ("Ciąg F", "thrust", "Thrust (N)", 1.0, 0.9)]
+    claims = [("Pc", "pc", "Combustion Chamber Pressure (kPa)", 1e3, 1.4),
+              ("p_tank", "p_tank", "Oxidizer Tank Pressure (kPa)", 1e3, 0.5),
+              ("O/F", "of", "Oxidizer to Fuel Ratio", 1.0, 0.8),
+              ("Ciąg F", "thrust", "Thrust (N)", 1.0, 0.6)]
     for label, ch, cr, sc, claim in claims:
         rows.append(Row(f"Średnia odchyłka {label} HyProp–HRAP [%]", "prusak_v2, faza ciekła 0.2–7.0 s",
                         claim, f"{README}; {src}", dev(ch, cr, sc), tol=0.05, dev_kind="abs",
                         unit="pp", comment="Odtworzenie deklaracji README (tolerancja = zaokrąglenie)."))
-    rows.append(Row("LRO HyProp", "prusak_v2", 7.19, README, round(lro, 4), tol=0.005,
+    rows.append(Row("LRO HyProp", "prusak_v2", 7.16, README, round(lro, 4), tol=0.005,
                     dev_kind="abs", unit="s"))
     # HRAP run-out from its own data: the step where mdot_ox collapses
     t = ref["Time (s)"].to_numpy(); m = ref["Oxidizer Mass Flow Rate (kg/s)"].to_numpy()
@@ -128,15 +125,15 @@ def sizing_examples() -> List[Row]:
     from hyprop.oppoints import analyze
 
     rows: List[Row] = []
-    res = api.run(api.load_config(str(REPO / "examples" / "hdpe_05kN.yaml")))
+    res = api.run(api.load_config(str(REPO / "examples" / "pe_05kN.yaml")))
     s = res.summary
     lro = res.event_time("liquid_runout")
-    case = "examples/hdpe_05kN.yaml"
+    case = "examples/pe_05kN.yaml"
     rows += [
-        Row("It", case, 3749, README, s["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
+        Row("It", case, 3719, README, s["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
         Row("Pc (szczyt)", case, 36.9, README, s["peak_pc_pa"] / 1e5, tol=0.05, dev_kind="abs", unit="bar"),
-        Row("LRO", case, 7.38, README, lro, tol=0.005, dev_kind="abs", unit="s"),
-        Row("Isp średni", case, 196, README, s["isp_mean_s"], tol=0.5, dev_kind="abs", unit="s"),
+        Row("LRO", case, 7.35, README, lro, tol=0.005, dev_kind="abs", unit="s"),
+        Row("Isp średni", case, 194, README, s["isp_mean_s"], tol=0.5, dev_kind="abs", unit="s"),
     ]
     rep = analyze(res)
     iw, ta = rep.point("impulse_weighted").values, rep.time_average
@@ -144,12 +141,12 @@ def sizing_examples() -> List[Row]:
     rows += [
         Row("Średnia czasowa F vs IW [%]", "ROP " + case, -51, README, 100 * (ta["thrust"] / iw["thrust"] - 1),
             tol=1.0, dev_kind="abs", unit="pp",
-            comment="README podaje liczby całkowite (51 %, 48 %); przykład drukuje −51.5 % i −47.5 %. Tolerancja ±1 pp."),
-        Row("Średnia czasowa Pc vs IW [%]", "ROP " + case, -48, README, 100 * (ta["pc"] / iw["pc"] - 1),
+            comment="README podaje liczby całkowite. Tolerancja ±1 pp."),
+        Row("Średnia czasowa Pc vs IW [%]", "ROP " + case, -47, README, 100 * (ta["pc"] / iw["pc"] - 1),
             tol=1.0, dev_kind="abs", unit="pp"),
-        Row("Udział fazy ciekłej w It [%]", "ROP " + case, 92.3, README, 100 * ph.loc["liquid", "impulse_share"],
+        Row("Udział fazy ciekłej w It [%]", "ROP " + case, 92.4, README, 100 * ph.loc["liquid", "impulse_share"],
             tol=0.05, dev_kind="abs", unit="pp"),
-        Row("Udział fazy ciekłej w czasie [%]", "ROP " + case, 42.6, README, 100 * ph.loc["liquid", "time_share"],
+        Row("Udział fazy ciekłej w czasie [%]", "ROP " + case, 42.8, README, 100 * ph.loc["liquid", "time_share"],
             tol=0.05, dev_kind="abs", unit="pp"),
     ]
     return rows
@@ -160,7 +157,7 @@ def size_3km() -> List[Row]:
     import hyprop.api as api
     from hyprop.sizing.preliminary import SizingOptions
 
-    case = "examples/size_hdpe_3km.py (api.size 0.5 kN / 4000 Ns / 3 km, Cantera)"
+    case = "examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera)"
     old = sm._TABLE_OF, sm._TABLE_PC
     sm._TABLE_OF, sm._TABLE_PC = 6, 5           # as in the example
     sm._TABLE_CACHE.clear()
@@ -172,105 +169,107 @@ def size_3km() -> List[Row]:
         sm._TABLE_CACHE.clear()
     a = sz.achieved
     return [
-        Row("Liczba iteracji", case, 7, README, sz.iterations, tol=0, dev_kind="abs",
+        Row("Liczba iteracji", case, 8, README, sz.iterations, tol=0, dev_kind="abs",
             comment="Tolerancja sizingu 1 % (v0.1: 3 %); v0.1 padało na błędzie B1."),
-        Row("F_iw", case, 497, README, a["thrust_iw_n"], tol=0.5, dev_kind="abs", unit="N"),
-        Row("It", case, 4040, README, a["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
+        Row("F_iw", case, 498, README, a["thrust_iw_n"], tol=0.5, dev_kind="abs", unit="N"),
+        Row("It", case, 4023, README, a["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
         Row("Dt", case, 12.0, README, sz.nozzle.throat_diameter_m * 1e3, tol=0.05, dev_kind="abs", unit="mm"),
-        Row("eps", case, 5.03, README, sz.nozzle.expansion_ratio, tol=0.005, dev_kind="abs"),
+        Row("eps", case, 5.00, README, sz.nozzle.expansion_ratio, tol=0.005, dev_kind="abs"),
     ]
 
 
 def trajectory() -> List[Row]:
-    src_text = (REPO / "examples" / "trajectory_hdpe_3km.py").read_text(encoding="utf-8")
+    src_text = (REPO / "examples" / "trajectory_pe_3km.py").read_text(encoding="utf-8")
     code = src_text.replace("print(", "(lambda *a, **k: None)(")
     ns: dict = {"__name__": "traj"}
-    exec(compile(code, "trajectory_hdpe_3km.py", "exec"), ns)
+    exec(compile(code, "trajectory_pe_3km.py", "exec"), ns)
     import hyprop.simulation.solver as sm
     sm._TABLE_OF, sm._TABLE_PC = 10, 7          # the example mutates module globals
     sm._TABLE_CACHE.clear()
-    return [Row("Apogeum (m_dry = 7 kg)", "examples/trajectory_hdpe_3km.py", 3775, README, ns["apogee"],
+    return [Row("Apogeum (m_dry = 7 kg)", "examples/trajectory_pe_3km.py", 3753, README, ns["apogee"],
                 tol=0.5, dev_kind="abs", unit="m",
                 comment="m_dry, Cd, D to założenia (skrypt); bez referencji lotnej.")]
 
 
 # ------------------------------------------------------- thermochemistry
-def cantera_anchor() -> List[Row]:
-    from scipy.optimize import brentq
+#: Project operating points (PE/N2O): README point + prusak_v2 liquid phase.
+PE_POINTS = ((6.5, 35.0), (6.3, 32.0), (8.0, 32.0))      # (O/F, Pc [bar])
+SPLITSTONE = ("Splitstone & Johnson, J. Res. NBS 78A(5) 611-616 (1974), "
+              "doi:10.6028/jres.078A.038")
+
+
+def pe_thermochemistry() -> List[Row]:
+    """PE/N2O: Cantera and RocketCEA backends vs NASA's own CEA package.
+
+    Reference: NASA CEA (Python package ``cea``, NASA Glenn, RP-1311
+    algorithm) with reactant '(CH2)x(cr)'. Its library enthalpy for PE
+    (-25.6 kJ/mol CH2, McBride 1996) is replaced by HyProp's value through
+    the chamber enthalpy hc, so all three codes solve the same problem.
+    """
+    import numpy as np
     from hyprop.cea import get_backend
+    from hyprop.data import load_fuel
 
     rows: List[Row] = []
-    script = external("HYPROP_REF_07", str(REPO.parent / "07_cantera_punkt0_termochemia.py"))
-    ref = None
-    if script is not None:
-        with tempfile.TemporaryDirectory() as td:
-            subprocess.run([sys.executable, str(script)], cwd=td, check=True,
-                           capture_output=True, text=True, timeout=600)
-            for line in (Path(td) / "cantera_sweep.csv").read_text().splitlines()[1:]:
-                f = line.split(",")
-                if abs(float(f[0]) - 6.5) < 1e-9:
-                    ref = dict(Tc=float(f[1]), cstar=float(f[2]), gamma=float(f[3]), M=float(f[4]),
-                               isp=float(f[5]))
-        s07 = f"Skrypt użytkownika `07_cantera_punkt0_termochemia.py` (sha256 {sha256(script)[:12]}…), " \
-              f"cantera_sweep.csv, O/F=6.5"
-    case = "parafina C32H66/N2O, Pc 35 bar, O/F 6.5, rozprężanie do 1.013 bar"
-    res = {}
+    fuel = load_fuel("ldpe")
+    hf = fuel.enthalpy_of_formation.value
+    rows.append(Row("ΔHf PE [kJ/mol C2H4]", "baza HyProp `ldpe`/`hdpe`", 2 * -28.182, SPLITSTONE,
+                    hf / 1e3, tol=0.01,
+                    comment="72 % krystaliczności. NASA CEA thermo.inp '(CH2)x(cr)' ma -51.2 (McBride 1996)."))
+    try:
+        import cea
+    except ImportError:
+        rows.append(Row("NASA CEA (pakiet cea)", "PE/N2O", None, "", None,
+                        comment="Brak pakietu `cea` (pip install cea, Python >= 3.11)."))
+        return rows
+    ver = getattr(cea, "__version__", "?")
+    src = f"NASA CEA, pakiet `cea` {ver} (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp"
+    reac = cea.Mixture(["(CH2)x(cr)", "N2O"])
+    t298 = np.array([298.15, 298.15])
+    h_ox = reac.calc_property(cea.ENTHALPY, np.array([0.0, 1.0]), t298)          # J/kg
+    m_c2h4 = 2 * 14.02658e-3
+    h_fu = hf / m_c2h4                                                            # J/kg
+    prod = cea.Mixture(["(CH2)x(cr)", "N2O"], products_from_reactants=True)
+    solver = cea.RocketSolver(prod, reactants=reac)
+    sol = cea.RocketSolution(solver)
+    backends = {}
     for name in ("cantera", "rocketcea"):
         try:
-            b = get_backend(name, fuel="paraffin", oxidizer="n2o")
+            backends[name] = get_backend(name, fuel="ldpe", oxidizer="n2o")
         except Exception:
-            continue
-        eps = brentq(lambda e: b.query(6.5, 35e5, e).equilibrium.exit_state.pressure_pa - 1.013e5,
-                     2.0, 15.0, xtol=1e-8)
-        r = b.query(6.5, 35e5, eps)
-        c = r.chamber
-        g, mm = c.gamma, c.molar_mass_kg_mol
-        cs_formula = math.sqrt(8314.46 / (mm * 1e3) * c.temperature_k / g) * \
-            ((g + 1) / 2) ** ((g + 1) / (2 * (g - 1)))
-        g_eq = c.gamma_eq
-        cs_formula_eq = math.sqrt(8314.46 / (mm * 1e3) * c.temperature_k / g_eq) * \
-            ((g_eq + 1) / 2) ** ((g_eq + 1) / (2 * (g_eq - 1)))
-        res[name] = dict(Tc=c.temperature_k, gamma=g, gamma_eq=g_eq, cs_formula_eq=cs_formula_eq,
-                         cstar=r.cstar_m_s, cs_formula=cs_formula,
-                         isp=r.equilibrium.exhaust_velocity_m_s / 9.80665,
-                         isp_fr=r.frozen.exhaust_velocity_m_s / 9.80665, eps=eps)
-    ca = res.get("cantera")
-    if ca and ref:
-        rows += [
-            Row("Tc", case + " [Cantera]", ref["Tc"], s07, ca["Tc"], tol=0.5, dev_kind="abs", unit="K",
-                comment="Cantera vs Cantera (ta sama baza gri30 i to samo Hf) – spójność, nie walidacja niezależna."),
-            Row("γ (cp/cv, zamrożone)", case + " [Cantera]", ref["gamma"], s07, ca["gamma"], tol=0.0005,
-                dev_kind="abs"),
-            Row("Isp_opt (równowaga)", case + " [Cantera]", ref["isp"], s07, ca["isp"], tol=0.05, dev_kind="abs",
-                unit="s"),
-            Row("c* ze wzoru idealnego (γ zamrożone)", case + " [Cantera]", ref["cstar"], s07, ca["cs_formula"],
-                tol=0.5, dev_kind="abs", unit="m/s"),
-        ]
-    if ca:
-        rows += [
-            Row("Tc – deklaracja README", case, 3292, README, ca["Tc"], tol=0.5, dev_kind="abs", unit="K"),
-            Row("γ (zamrożone) – deklaracja README", case, 1.247, README, ca["gamma"], tol=0.0005, dev_kind="abs"),
-            Row("Isp – deklaracja README", case, 247, README, ca["isp"], tol=0.5, dev_kind="abs", unit="s"),
-            Row("c* równowagowe / c* ze wzoru – deklaracja README „~2.3 %”", case, 2.3, README,
-                100 * (ca["cstar"] / ca["cs_formula"] - 1), tol=0.1, dev_kind="abs", unit="pp"),
-        ]
-    rc = res.get("rocketcea")
-    if ca and rc:
-        src_rc = "NASA CEA (Gordon & McBride, NASA RP-1311, 1994/1996) przez RocketCEA 1.2.3; " \
-                 "paliwo: karta z bazy HyProp (C32H66, Hf=-703 kJ/mol)"
-        rows += [
-            Row("Tc Cantera vs NASA CEA", case, rc["Tc"], src_rc, ca["Tc"], tol=1.0),
-            Row("c* Cantera vs NASA CEA", case, rc["cstar"], src_rc, ca["cstar"], tol=1.0),
-            Row("Isp_opt eq Cantera vs NASA CEA", case, rc["isp"], src_rc, ca["isp"], tol=1.0),
-            Row("Isp_opt frozen Cantera vs NASA CEA", case, rc["isp_fr"], src_rc, ca["isp_fr"], tol=1.0),
-            Row("γ zamrożone (cp/cv) Cantera vs NASA CEA", case, rc["gamma"], src_rc, ca["gamma"], tol=0.1,
-                comment="README: „within 1e-3”. W v0.1 backendy zwracały w `gamma` różne wielkości (B3)."),
-            Row("γ_s równowagowe Cantera vs NASA CEA (GAMMAs)", case, rc["gamma_eq"], src_rc, ca["gamma_eq"],
-                tol=0.1, comment="Cantera: różnica centralna (d ln p/d ln ρ)_s, RP-1311 Eq. 2.71."),
-            Row("c* ze wzoru idealnego z γ_s vs c* CEA", case, rc["cstar"], src_rc, rc["cs_formula_eq"],
-                tol=0.5, comment="Wyjaśnienie „2.3 %”: wzór idealny z γ_s odtwarza c* równowagowe; "
-                                 "2.3 % to wyłącznie efekt wstawienia γ zamrożonego do wzoru."),
-        ]
+            pass
+    g0 = 9.80665
+    for of, pc in PE_POINTS:
+        w = reac.of_ratio_to_weights(np.array([0.0, 1.0]), np.array([1.0, 0.0]), of)
+        hc = (h_fu / (1 + of) + h_ox * of / (1 + of)) / cea.R
+        solver.solve(sol, w, pc, [pc / 1.01325], supar=[5.0], hc=hc, iac=True)
+        mw = sol.MW[0]
+        ref = dict(Tc=sol.T[0], cstar=sol.c_star[0], gamma_s=sol.gamma_s[0],
+                   gamma_fr=sol.cp_fr[0] / (sol.cp_fr[0] - 8.314462618 / mw),
+                   eps_opt=sol.ae_at[2], isp_opt=sol.Isp[2] / g0, isp5=sol.Isp[3] / g0)
+        case = f"PE/N2O O/F {of}, Pc {pc:g} bar"
+        for name, b in backends.items():
+            r5 = b.query(of, pc * 1e5, 5.0)
+            ro = b.query(of, pc * 1e5, float(ref["eps_opt"]))
+            c = r5.chamber
+            got = dict(Tc=c.temperature_k, cstar=r5.cstar_m_s, gamma_s=c.gamma_eq, gamma_fr=c.gamma,
+                       isp_opt=ro.equilibrium.exhaust_velocity_m_s / g0,
+                       isp5=r5.equilibrium.exhaust_velocity_m_s / g0)
+            labels = dict(Tc="Tc", cstar="c*", gamma_s="γ_s (równowagowe)", gamma_fr="γ zamrożone cp/cv",
+                          isp_opt=f"Isp, p_e = 1 atm (ε={ref['eps_opt']:.3f})", isp5="Isp próżn.-wylot v_e/g0, ε=5")
+            keys = labels if name == "cantera" else ("Tc", "cstar", "isp_opt")
+            for k in keys:
+                rows.append(Row(f"{labels[k]} – {name}", case, float(ref[k]), src, float(got[k]), tol=0.5))
+        if "cantera" in backends:
+            cb = backends["cantera"].query(of, pc * 1e5, 5.0).chamber
+            for gname, g in (("zamrożone", cb.gamma), ("γ_s", cb.gamma_eq)):
+                cs = math.sqrt(8314.462618 / (cb.molar_mass_kg_mol * 1e3) * cb.temperature_k / g) * \
+                    ((g + 1) / 2) ** ((g + 1) / (2 * (g - 1)))
+                rows.append(Row(f"c* ze wzoru idealnego z γ {gname} vs c* CEA [%]", case,
+                                float(ref["cstar"]), src, cs, tol=None if gname == "zamrożone" else 0.5,
+                                status=INFO if gname == "zamrożone" else "",
+                                comment=("Wzór idealny z γ zamrożonym zaniża c* (dawne „~2.3 %” ze skryptu 07)."
+                                         if gname == "zamrożone" else "Z γ_s wzór odtwarza c* równowagowe.")))
     return rows
 
 
@@ -293,6 +292,6 @@ def n2o_esdu_vs_coolprop() -> List[Row]:
 
 def all_rows() -> List[Row]:
     rows: List[Row] = []
-    for fn in (hrap_benchmark, sizing_examples, size_3km, trajectory, cantera_anchor, n2o_esdu_vs_coolprop):
+    for fn in (hrap_benchmark, sizing_examples, size_3km, trajectory, pe_thermochemistry, n2o_esdu_vs_coolprop):
         rows += fn()
     return rows

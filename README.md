@@ -26,10 +26,18 @@ pip install -e .[dev,cantera,props,export]
 pytest
 ```
 
-Optional: `pip install rocketcea` (NASA CEA; needs a Fortran compiler)
-and `pip install -e .[opt]` (pymoo NSGA-II, SALib Morris/Sobol).
+Optional: `pip install rocketcea` (NASA CEA; needs a Fortran compiler),
+`pip install cea` (NASA's CEA package, used by `validation/`) and
+`pip install -e .[opt]` (pymoo NSGA-II, SALib Morris/Sobol).
 
 ## Physical conventions (v0.2)
+
+* **Fuel**: polyethylene. `ldpe` = the MELprop TotalEnergies LDPE/LLDPE
+  granulate (rho 920 kg/m^3, to be measured), `hdpe` = HRAP preset.
+  Solid-phase dHf = -28.182 kJ/mol CH2 (Splitstone & Johnson, J. Res. NBS
+  78A, 611, 1974). Regression a, n for PE come from the HRAP HDPE preset
+  and must be measured. Paraffin, HTPB, ABS and PMMA stay in the database
+  for comparisons only.
 
 * **Thrust** (Sutton & Biblarz, *Rocket Propulsion Elements*, 9th ed.,
   Sec. 3.5, Eqs. 3-40/3-41):
@@ -52,18 +60,19 @@ and `pip install -e .[opt]` (pymoo NSGA-II, SALib Morris/Sobol).
 
 Reproduced with `python -m validation.run_all`.
 
-* **HRAP v1.06 benchmark** (prusak_v2, HDPE/N2O, liquid phase): mean
-  deviations Pc 1.7 %, tank pressure 0.6 %, O/F 1.0 %, thrust 0.9 %
-  (0.2-7.0 s). Liquid run-out 7.19 s vs 6.955 s in HRAP (+3.4 %). This is a
+* **HRAP v1.06 benchmark** (prusak_v2, PE/N2O, HRAP HDPE preset with
+  rho 920, liquid phase): mean deviations Pc 1.4 %, tank pressure 0.5 %,
+  O/F 0.8 %, thrust 0.6 % (0.2-7.0 s). Liquid run-out 7.16 s vs 6.955 s
+  in HRAP (+2.9 %). This is a
   code-to-code check (same tank, injector and regression models), not a
   physical validation. HRAP omits eta_c* from thrust, so part of the
   thrust agreement is coincidental (docs/VALIDATION.md, Sec. 2).
-* **Thermochemistry**: Cantera backend vs NASA CEA (RocketCEA) for
-  C32H66/N2O, 35 bar, O/F 6.5: Tc, c*, Isp within 0.15 %; frozen and
-  equilibrium gamma within 1e-3. The user's 07_cantera script is
-  reproduced exactly (Tc 3292 K, gamma 1.247, Isp_opt 247.2 s). Its
-  c* is 2.3 % below CEA because the ideal formula uses frozen gamma;
-  with gamma_s the formula reproduces CEA c* to 0.13 %.
+* **Thermochemistry (PE/N2O)**: Cantera and RocketCEA backends vs NASA's
+  own CEA package (`cea`, reactant `(CH2)x(cr)` with the same dHf) at
+  O/F 6.5/35 bar, 6.3/32 bar and 8.0/32 bar: Tc, c*, gamma (frozen and
+  gamma_s) and Isp within 0.2 %. The ideal-gas c* formula with frozen
+  gamma underestimates the equilibrium c* by ~2.5 %; with gamma_s it
+  reproduces it (this was the "2.3 %" of v0.1).
 * **N2O**: ESDU 91022 vs CoolProp (Lemmon & Span 2006 EOS), 263-303 K:
   p_sat 0.16 %, rho_l 0.19 %.
 * **Regression coefficients** match HRAP `.mat` files (HDPE 0.104/0.352,
@@ -73,12 +82,12 @@ Reproduced with `python -m validation.run_all`.
 
 | Script | Result |
 |---|---|
-| `examples/sizing_hdpe_05kN.py` | HDPE/N2O: It = 3749 Ns, Pc_peak 36.9 bar, LRO 7.38 s, Isp 196 s |
-| `examples/rop_hdpe_05kN.py` | time averages understate thrust by 51 % and Pc by 48 % vs impulse-weighted; liquid phase delivers 92.3 % of It in 42.6 % of burn time |
-| `examples/size_hdpe_3km.py` | `api.size(500 N, 4000 Ns, 3 km)`: 7 iterations, F_iw 497 N, It 4040 Ns, Dt 12.0 mm, eps 5.03 adapted at 1000 m |
-| `examples/trajectory_hdpe_3km.py` | 1-DOF, m_dry 7 kg (assumed), Cd 0.55, D 0.10 m: apogee 3775 m |
+| `examples/sizing_pe_05kN.py` | PE (LDPE)/N2O: It = 3719 Ns, Pc_peak 36.9 bar, LRO 7.35 s, Isp 194 s |
+| `examples/rop_pe_05kN.py` | time averages understate thrust by 51 % and Pc by 47 % vs impulse-weighted; liquid phase delivers 92.4 % of It in 42.8 % of burn time |
+| `examples/size_pe_3km.py` | `api.size(500 N, 4000 Ns, 3 km)`, LDPE: 8 iterations, F_iw 498 N, It 4023 Ns, Dt 12.0 mm, eps 5.00 adapted at 1000 m |
+| `examples/trajectory_pe_3km.py` | 1-DOF, m_dry 7 kg (assumed), Cd 0.55, D 0.10 m: apogee 3753 m |
 | `examples/benchmark_prusak_v2.py` | HRAP comparison (needs `HYPROP_HRAP_DIR`) |
-| `examples/sensitivity_hdpe.py`, `examples/report_hdpe_3km.py` | OAT sensitivity; CSV/XLSX/JSON export + LaTeX report |
+| `examples/sensitivity_pe.py`, `examples/report_pe_3km.py` | OAT sensitivity; CSV/XLSX/JSON export + LaTeX report |
 
 Figures and exports go to `outputs/` (git-ignored).
 
@@ -88,11 +97,11 @@ Figures and exports go to `outputs/` (git-ignored).
 import hyprop.api as api
 from hyprop.cea import get_backend
 
-result = api.run(api.load_config("examples/hdpe_05kN.yaml"))
+result = api.run(api.load_config("examples/pe_05kN.yaml"))
 print(result.summary["total_impulse_ns"], result.thermo_backend)
 
-cea = get_backend("cantera", fuel="paraffin", oxidizer="n2o")
-r = cea.query(of=6.5, pc=35e5, eps=5.0)
+cea = get_backend("cantera", fuel="ldpe", oxidizer="n2o")
+r = cea.query(of=6.3, pc=32e5, eps=5.0)
 print(r.chamber.temperature_k, r.chamber.gamma, r.chamber.gamma_eq,
       r.cstar_m_s, r.isp_s(101325.0), r.isp_s(101325.0, mode="frozen"))
 ```
