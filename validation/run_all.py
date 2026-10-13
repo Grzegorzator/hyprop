@@ -12,7 +12,6 @@ import datetime as _dt
 import importlib
 import logging
 import platform
-import re
 import subprocess
 import sys
 import warnings
@@ -54,8 +53,6 @@ def main() -> None:
     from validation import readme_claims
 
     rows = readme_claims.all_rows()
-    readme = (REPO / "README.md").read_text(encoding="utf-8")
-    claimed = sorted(set(re.findall(r"(\d+) (?:passing|tests)", readme)))
     md = [
         "# HyProp – raport walidacji\n",
         f"Wygenerowano: {_dt.datetime.now():%Y-%m-%d %H:%M}, commit `{_git()}`  ",
@@ -65,7 +62,6 @@ def main() -> None:
         "Brak źródła = `TODO: brak referencji`. INFO = wielkość raportowana bez kryterium.\n",
         "## 0. Zestaw testów (wszystkie opcjonalne backendy zainstalowane)\n",
         "```", _pytest_summary(), "```",
-        f"README deklaruje liczbę testów: {', '.join(claimed)} (różne miejsca README).\n",
         "## 1. Odtworzenie deklaracji z README\n",
         f"Podsumowanie: {tally(rows)}\n",
         to_markdown(rows),

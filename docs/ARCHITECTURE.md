@@ -5,6 +5,25 @@ Wersja 0.2 (Etap 0 — po recenzji współautora, 10 rozszerzeń + warstwa `phys
 
 ---
 
+> **Zmiany 2026-10 (v0.2, przed integracją z YAADO)** — ten dokument opisuje
+> projekt v0.1; obowiązują poniższe odstępstwa:
+>
+> * **GUI usunięte** (`hyprop/gui`, instalatory, skróty). HyProp to biblioteka
+>   do sizingu; docelowo solver napędu hybrydowego w YAADO (MDO).
+> * Usunięte rekordy `database/` (żadnych prób ogniowych jeszcze nie było);
+>   moduł `hyprop.database` pozostaje jako API.
+> * **D11 (nowe): sprawności.** Ciąg wg konwencji współczynników korekcyjnych
+>   Suttona (9th ed., r. 3.5, równ. 3-40/3-41): `F = η_c*·η_noz·ṁ·c_i`,
+>   `c_i = v_e + (p_e − p_a)·ε·c*_i/p_c`. W v0.1 η_c* obniżało tylko Pc
+>   (jak w HRAP), przez co ∂F/∂η_c* < 0.
+> * **D12 (nowe): γ.** `StationState.gamma` = zamrożone cp/cv (wszystkie
+>   backendy), `gamma_eq` = γ_s równowagowe (CEA GAMMAs).
+> * **Dysza w sizingu**: ε z rozprężania CEA (p_e = p_a na wysokości
+>   projektowej), Cf dostarczony = λ·η·Cd·Cf_i.
+> * `simulation.cea_backend` jest respektowany (wcześniej solver zawsze
+>   używał Cantery).
+> * Walidacja: `validation/` + `docs/VALIDATION.md`.
+
 ## 1. Cel i zakres
 
 Środowisko inżynierskie do projektowania hybrydowych silników rakietowych: od wymagań

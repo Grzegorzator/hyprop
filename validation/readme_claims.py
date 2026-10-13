@@ -12,7 +12,6 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import math
-import re
 import subprocess
 import sys
 import tempfile
@@ -24,7 +23,7 @@ import numpy as np
 from validation.common import FAIL, INFO, REPO, Row, external, sha256
 
 _trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
-README = "README.md §Validation anchors"
+README = "README.md (v0.2, sekcje Validation/Examples)"
 
 
 def _load_example(name: str):
@@ -65,7 +64,7 @@ def hrap_benchmark() -> List[Row]:
     claims = [("Pc", "pc", "Combustion Chamber Pressure (kPa)", 1e3, 1.7),
               ("p_tank", "p_tank", "Oxidizer Tank Pressure (kPa)", 1e3, 0.6),
               ("O/F", "of", "Oxidizer to Fuel Ratio", 1.0, 1.0),
-              ("Ciąg F", "thrust", "Thrust (N)", 1.0, 6.2)]
+              ("Ciąg F", "thrust", "Thrust (N)", 1.0, 0.9)]
     for label, ch, cr, sc, claim in claims:
         rows.append(Row(f"Średnia odchyłka {label} HyProp–HRAP [%]", "prusak_v2, faza ciekła 0.2–7.0 s",
                         claim, f"{README}; {src}", dev(ch, cr, sc), tol=0.05, dev_kind="abs",
@@ -76,11 +75,11 @@ def hrap_benchmark() -> List[Row]:
     t = ref["Time (s)"].to_numpy(); m = ref["Oxidizer Mass Flow Rate (kg/s)"].to_numpy()
     i = int(np.argmin(np.diff(m)))
     lro_hrap = float(t[i + 1])
-    rows.append(Row("LRO HRAP: deklaracja README „~7.5 s”", "prusak_v2", lro_hrap,
-                    f"{src}: skok ṁ_ox {m[i]:.3f}→{m[i+1]:.3f} kg/s", 7.5, tol=1.0,
-                    comment="Kolumna HyProp = wartość z README. README zawyża LRO HRAP; z CSV wynika 6.955 s."))
+    rows.append(Row("LRO HRAP (z danych HRAP)", "prusak_v2", 6.955,
+                    README, lro_hrap, tol=0.0005, dev_kind="abs", unit="s",
+                    comment=f"Skok ṁ_ox {m[i]:.3f}→{m[i+1]:.3f} kg/s w CSV. (v0.1 README podawało błędnie ~7.5 s.)"))
     rows.append(Row("LRO HyProp vs HRAP", "prusak_v2", lro_hrap, src, round(lro, 4),
-                    comment="Odchyłka faktyczna (bez tolerancji – do oceny w pkt 5).", status=INFO))
+                    comment="Odchyłka faktyczna, bez kryterium (do oceny w pkt 5).", status=INFO))
 
     # Thrust-gap decomposition: same run, frozen instead of shifting exit.
     import hyprop.cea.table as tb
@@ -94,8 +93,9 @@ def hrap_benchmark() -> List[Row]:
     a = np.interp(tg, dff.t, dff.thrust); b = np.interp(tg, ref["Time (s)"], ref["Thrust (N)"])
     rows.append(Row("Średnia odchyłka F, wylot zamrożony [%]", "prusak_v2 (diagnostyka)", None, "",
                     float(100 * np.mean(np.abs(a - b)) / np.mean(b)), status=INFO,
-                    comment="Ta sama symulacja z v_e zamrożonym zamiast równowagowego: luka F 6.2 → "
-                            "~3.3 %. Równowaga/zamrożenie tłumaczy ok. połowę; reszta niewyjaśniona (pkt 5)."))
+                    comment="Ta sama symulacja z v_e zamrożonym zamiast równowagowego (diagnostyka). "
+                            "HRAP nie stosuje η_c* do ciągu, a liczy v_e ze stałym γ; zgodność F jest "
+                            "częściowo przypadkowa (efekty o przeciwnych znakach)."))
 
     # regression coefficients: HRAP .mat vs HyProp database
     from scipy.io import loadmat
@@ -133,10 +133,10 @@ def sizing_examples() -> List[Row]:
     lro = res.event_time("liquid_runout")
     case = "examples/hdpe_05kN.yaml"
     rows += [
-        Row("It", case, 3942, README, s["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
-        Row("Pc (szczyt)", case, 37, README, s["peak_pc_pa"] / 1e5, tol=0.5, dev_kind="abs", unit="bar",
-            comment="README podaje „Pc 37 bar” bez rodzaju; zgadza się z wartością szczytową."),
-        Row("LRO", case, 7.4, README, lro, tol=0.05, dev_kind="abs", unit="s"),
+        Row("It", case, 3749, README, s["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
+        Row("Pc (szczyt)", case, 36.9, README, s["peak_pc_pa"] / 1e5, tol=0.05, dev_kind="abs", unit="bar"),
+        Row("LRO", case, 7.38, README, lro, tol=0.005, dev_kind="abs", unit="s"),
+        Row("Isp średni", case, 196, README, s["isp_mean_s"], tol=0.5, dev_kind="abs", unit="s"),
     ]
     rep = analyze(res)
     iw, ta = rep.point("impulse_weighted").values, rep.time_average
@@ -147,7 +147,7 @@ def sizing_examples() -> List[Row]:
             comment="README podaje liczby całkowite (51 %, 48 %); przykład drukuje −51.5 % i −47.5 %. Tolerancja ±1 pp."),
         Row("Średnia czasowa Pc vs IW [%]", "ROP " + case, -48, README, 100 * (ta["pc"] / iw["pc"] - 1),
             tol=1.0, dev_kind="abs", unit="pp"),
-        Row("Udział fazy ciekłej w It [%]", "ROP " + case, 92.4, README, 100 * ph.loc["liquid", "impulse_share"],
+        Row("Udział fazy ciekłej w It [%]", "ROP " + case, 92.3, README, 100 * ph.loc["liquid", "impulse_share"],
             tol=0.05, dev_kind="abs", unit="pp"),
         Row("Udział fazy ciekłej w czasie [%]", "ROP " + case, 42.6, README, 100 * ph.loc["liquid", "time_share"],
             tol=0.05, dev_kind="abs", unit="pp"),
@@ -158,70 +158,40 @@ def sizing_examples() -> List[Row]:
 def size_3km() -> List[Row]:
     import hyprop.simulation.solver as sm
     import hyprop.api as api
+    from hyprop.sizing.preliminary import SizingOptions
 
-    case = "examples/size_hdpe_3km.py (api.size 0.5 kN / 4000 Ns / 3 km)"
-    rows: List[Row] = []
+    case = "examples/size_hdpe_3km.py (api.size 0.5 kN / 4000 Ns / 3 km, Cantera)"
     old = sm._TABLE_OF, sm._TABLE_PC
     sm._TABLE_OF, sm._TABLE_PC = 6, 5           # as in the example
     sm._TABLE_CACHE.clear()
     try:
-        try:
-            api.size(thrust_n=500.0, total_impulse_ns=4000.0, apogee_m=3000.0, fuel="hdpe", oxidizer="n2o")
-            rows.append(Row("api.size bez wyjątku", case, None, "", None, status=INFO, comment="OK"))
-        except ValueError as exc:
-            rows.append(Row("api.size bez wyjątku", case, None, README, None, status=FAIL,
-                            comment=f"BŁĄD: `{exc}`. Klucz cache tablicy CEA to round(eps, 2), a "
-                                    "TabulatedBackend.query wymaga |Δeps|<1e-9 → kolizja kluczy dla "
-                                    "eps 5.0209 i 5.0167."))
-        # Diagnostic: exact-eps cache key (this is the proposed fix, not applied in hyprop/)
-        orig = sm._build_cea_table
-        cache = {}
-
-        def exact(config, eps):
-            k = (config.fuel.name, config.oxidizer.name, float(eps))
-            if k not in cache:
-                sm._TABLE_CACHE.clear()
-                cache[k] = orig(config, eps)
-            return cache[k]
-        sm._build_cea_table = exact
-        try:
-            sz = api.size(thrust_n=500.0, total_impulse_ns=4000.0, apogee_m=3000.0, fuel="hdpe", oxidizer="n2o")
-        finally:
-            sm._build_cea_table = orig
-        a = sz.achieved
-        note = "Z poprawionym kluczem cache (diagnostyka, bez zmian w hyprop/)."
-        rows += [
-            Row("Liczba iteracji", case, 5, README, sz.iterations, tol=0, dev_kind="abs", comment=note),
-            Row("F_iw", case, 494, README, a["thrust_iw_n"], tol=0.5, dev_kind="abs", unit="N", comment=note),
-            Row("It", case, 4083, README, a["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns", comment=note),
-            Row("eps", case, 5.02, README, sz.nozzle.expansion_ratio, tol=0.005, dev_kind="abs", comment=note),
-        ]
+        sz = api.size(thrust_n=500.0, total_impulse_ns=4000.0, apogee_m=3000.0, fuel="hdpe",
+                      oxidizer="n2o", options=SizingOptions(cea_backend="cantera"))
     finally:
         sm._TABLE_OF, sm._TABLE_PC = old
         sm._TABLE_CACHE.clear()
-    return rows
+    a = sz.achieved
+    return [
+        Row("Liczba iteracji", case, 7, README, sz.iterations, tol=0, dev_kind="abs",
+            comment="Tolerancja sizingu 1 % (v0.1: 3 %); v0.1 padało na błędzie B1."),
+        Row("F_iw", case, 497, README, a["thrust_iw_n"], tol=0.5, dev_kind="abs", unit="N"),
+        Row("It", case, 4040, README, a["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
+        Row("Dt", case, 12.0, README, sz.nozzle.throat_diameter_m * 1e3, tol=0.05, dev_kind="abs", unit="mm"),
+        Row("eps", case, 5.03, README, sz.nozzle.expansion_ratio, tol=0.005, dev_kind="abs"),
+    ]
 
 
 def trajectory() -> List[Row]:
     src_text = (REPO / "examples" / "trajectory_hdpe_3km.py").read_text(encoding="utf-8")
-    pat = r"^M_DRY, D_REF, CD = ([0-9.]+), 0\.10, 0\.55"
-    m_now = float(re.search(pat, src_text, re.M).group(1))
-    out = {}
-    for m_dry in (9.0, m_now):
-        code = re.sub(pat, f"M_DRY, D_REF, CD = {m_dry}, 0.10, 0.55", src_text, flags=re.M)
-        code = code.replace("print(", "(lambda *a, **k: None)(")
-        ns: dict = {"__name__": "traj"}
-        exec(compile(code, "trajectory_hdpe_3km.py", "exec"), ns)
-        out[m_dry] = ns["apogee"]
-        import hyprop.simulation.solver as sm
-        sm._TABLE_OF, sm._TABLE_PC = 10, 7          # the example mutates module globals
-        sm._TABLE_CACHE.clear()
-    case = "examples/trajectory_hdpe_3km.py"
-    return [
-        Row("Apogeum (m_dry = 9 kg, jak w README)", case, 3291, README, out[9.0], tol=0.5, dev_kind="abs", unit="m"),
-        Row(f"Apogeum (m_dry = {m_now:g} kg, obecny skrypt)", case, None, "", out[m_now], status=INFO, unit="m",
-            comment="README nieaktualne: commit d22b828 zmienił m_dry 9→7 kg, README dalej podaje 3291 m dla 9 kg."),
-    ]
+    code = src_text.replace("print(", "(lambda *a, **k: None)(")
+    ns: dict = {"__name__": "traj"}
+    exec(compile(code, "trajectory_hdpe_3km.py", "exec"), ns)
+    import hyprop.simulation.solver as sm
+    sm._TABLE_OF, sm._TABLE_PC = 10, 7          # the example mutates module globals
+    sm._TABLE_CACHE.clear()
+    return [Row("Apogeum (m_dry = 7 kg)", "examples/trajectory_hdpe_3km.py", 3775, README, ns["apogee"],
+                tol=0.5, dev_kind="abs", unit="m",
+                comment="m_dry, Cd, D to założenia (skrypt); bez referencji lotnej.")]
 
 
 # ------------------------------------------------------- thermochemistry
@@ -257,7 +227,11 @@ def cantera_anchor() -> List[Row]:
         g, mm = c.gamma, c.molar_mass_kg_mol
         cs_formula = math.sqrt(8314.46 / (mm * 1e3) * c.temperature_k / g) * \
             ((g + 1) / 2) ** ((g + 1) / (2 * (g - 1)))
-        res[name] = dict(Tc=c.temperature_k, gamma=g, cstar=r.cstar_m_s, cs_formula=cs_formula,
+        g_eq = c.gamma_eq
+        cs_formula_eq = math.sqrt(8314.46 / (mm * 1e3) * c.temperature_k / g_eq) * \
+            ((g_eq + 1) / 2) ** ((g_eq + 1) / (2 * (g_eq - 1)))
+        res[name] = dict(Tc=c.temperature_k, gamma=g, gamma_eq=g_eq, cs_formula_eq=cs_formula_eq,
+                         cstar=r.cstar_m_s, cs_formula=cs_formula,
                          isp=r.equilibrium.exhaust_velocity_m_s / 9.80665,
                          isp_fr=r.frozen.exhaust_velocity_m_s / 9.80665, eps=eps)
     ca = res.get("cantera")
@@ -275,8 +249,7 @@ def cantera_anchor() -> List[Row]:
     if ca:
         rows += [
             Row("Tc – deklaracja README", case, 3292, README, ca["Tc"], tol=0.5, dev_kind="abs", unit="K"),
-            Row("γ – deklaracja README", case, 1.245, README, ca["gamma"], tol=0.0005, dev_kind="abs",
-                comment="README: 1.245; skrypt 07 i HyProp: 1.247. Literówka w README (różnica 0.2 %)."),
+            Row("γ (zamrożone) – deklaracja README", case, 1.247, README, ca["gamma"], tol=0.0005, dev_kind="abs"),
             Row("Isp – deklaracja README", case, 247, README, ca["isp"], tol=0.5, dev_kind="abs", unit="s"),
             Row("c* równowagowe / c* ze wzoru – deklaracja README „~2.3 %”", case, 2.3, README,
                 100 * (ca["cstar"] / ca["cs_formula"] - 1), tol=0.1, dev_kind="abs", unit="pp"),
@@ -290,11 +263,12 @@ def cantera_anchor() -> List[Row]:
             Row("c* Cantera vs NASA CEA", case, rc["cstar"], src_rc, ca["cstar"], tol=1.0),
             Row("Isp_opt eq Cantera vs NASA CEA", case, rc["isp"], src_rc, ca["isp"], tol=1.0),
             Row("Isp_opt frozen Cantera vs NASA CEA", case, rc["isp_fr"], src_rc, ca["isp_fr"], tol=1.0),
-            Row("γ komory Cantera vs NASA CEA", case, rc["gamma"], src_rc, ca["gamma"], tol=1.0,
-                comment="RÓŻNE DEFINICJE: Cantera backend zwraca cp/cv (zamrożone), RocketCEA γ_s "
-                        "(równowagowe). Ten sam atrybut `chamber.gamma` znaczy co innego zależnie od backendu."),
-            Row("c* ze wzoru idealnego z γ_s (CEA) vs c* CEA", case, rc["cstar"], src_rc, rc["cs_formula"],
-                tol=0.5, comment="Wyjaśnienie „2.3 %”: wzór idealny z γ_s odtwarza c* równowagowe (0.1 %); "
+            Row("γ zamrożone (cp/cv) Cantera vs NASA CEA", case, rc["gamma"], src_rc, ca["gamma"], tol=0.1,
+                comment="README: „within 1e-3”. W v0.1 backendy zwracały w `gamma` różne wielkości (B3)."),
+            Row("γ_s równowagowe Cantera vs NASA CEA (GAMMAs)", case, rc["gamma_eq"], src_rc, ca["gamma_eq"],
+                tol=0.1, comment="Cantera: różnica centralna (d ln p/d ln ρ)_s, RP-1311 Eq. 2.71."),
+            Row("c* ze wzoru idealnego z γ_s vs c* CEA", case, rc["cstar"], src_rc, rc["cs_formula_eq"],
+                tol=0.5, comment="Wyjaśnienie „2.3 %”: wzór idealny z γ_s odtwarza c* równowagowe; "
                                  "2.3 % to wyłącznie efekt wstawienia γ zamrożonego do wzoru."),
         ]
     return rows

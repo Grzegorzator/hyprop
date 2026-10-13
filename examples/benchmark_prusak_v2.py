@@ -36,7 +36,8 @@ CFG = dict(
                 discharge_coefficient=0.98),
     #   ^ HRAP noz_eff=0.95 is total; our lambda(15deg)=0.983 * 0.9673 = 0.95
     efficiencies=dict(eta_cstar=0.95),
-    simulation=dict(dt_s=0.01, t_max_s=30.0, pc_solver="fixed_point"),
+    simulation=dict(dt_s=0.01, t_max_s=30.0, pc_solver="fixed_point",
+                    cea_backend="cantera"),
 )
 
 def main():
