@@ -299,7 +299,7 @@ def size_3km() -> list[Row]:
             thrust_n=500.0,
             total_impulse_ns=4000.0,
             apogee_m=3000.0,
-            fuel="hdpe",
+            fuel="ldpe",
             oxidizer="n2o",
             options=SizingOptions(cea_backend="cantera"),
         )
@@ -318,19 +318,39 @@ def size_3km() -> list[Row]:
             dev_kind="abs",
             comment="Tolerancja sizingu 1 % (v0.1: 3 %); v0.1 padało na błędzie B1.",
         ),
-        Row("F_iw", case, 498, README, a["thrust_iw_n"], tol=0.5, dev_kind="abs", unit="N"),
+        Row("F_iw", case, 497, README, a["thrust_iw_n"], tol=0.5, dev_kind="abs", unit="N"),
+        Row(
+            "O/F_iw (cel = O/F optymalne Isp)",
+            case,
+            7.90,
+            README,
+            a["of_iw"],
+            tol=0.005,
+            dev_kind="abs",
+            comment=f"Cel {a['of_target']:.2f}; tolerancja pętli 2 %.",
+        ),
+        Row(
+            "Długość ziarna",
+            case,
+            390,
+            README,
+            sz.config.grain.length_m * 1e3,
+            tol=0.5,
+            dev_kind="abs",
+            unit="mm",
+        ),
         Row("It", case, 4030, README, a["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
         Row(
             "Dt",
             case,
-            12.0,
+            11.9,
             README,
             sz.nozzle.throat_diameter_m * 1e3,
             tol=0.05,
             dev_kind="abs",
             unit="mm",
         ),
-        Row("eps", case, 5.00, README, sz.nozzle.expansion_ratio, tol=0.005, dev_kind="abs"),
+        Row("eps", case, 5.67, README, sz.nozzle.expansion_ratio, tol=0.005, dev_kind="abs"),
     ]
 
 
@@ -347,13 +367,14 @@ def trajectory() -> list[Row]:
         Row(
             "Apogeum (m_dry = 7 kg)",
             "examples/trajectory_pe_3km.py",
-            3736,
+            3761,
             README,
             ns["apogee"],
             tol=0.5,
             dev_kind="abs",
             unit="m",
-            comment="m_dry, Cd, D to założenia (skrypt); bez referencji lotnej.",
+            comment="Poglądowe: m_dry, Cd, D zgadnięte (masa rakiety nieznana); "
+            "bez referencji lotnej.",
         )
     ]
 

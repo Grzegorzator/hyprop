@@ -111,8 +111,8 @@ for accepting intended changes: [`tests/golden/README.md`](tests/golden/README.m
 |---|---|
 | `examples/sizing_pe_05kN.py` | PE (LDPE)/N2O: It = 3501 Ns, Pc_peak 36.0 bar, LRO 7.11 s, Isp 184 s (eta_c* 0.90) |
 | `examples/rop_pe_05kN.py` | time averages understate thrust by 51 % and Pc by 47 % vs impulse-weighted; liquid phase delivers 92.8 % of It in 43.1 % of burn time |
-| `examples/size_pe_3km.py` | `api.size(500 N, 4000 Ns, 3 km)`, LDPE: 8 iterations, F_iw 498 N, It 4030 Ns, Dt 12.0 mm, eps 5.00 adapted at 1000 m |
-| `examples/trajectory_pe_3km.py` | 1-DOF, m_dry 7 kg (assumed), Cd 0.55, D 0.10 m: apogee 3736 m |
+| `examples/size_pe_3km.py` | `api.size(500 N, 4000 Ns, 3 km)`, LDPE: 8 iterations, F_iw 497 N, It 4030 Ns, O/F_iw 7.90 (target = Isp-optimal 7.93), grain 28.2/43.3 mm x 390 mm, Dt 11.9 mm, eps 5.67 adapted at 1000 m |
+| `examples/trajectory_pe_3km.py` | illustrative only (rocket mass not known): 1-DOF, m_dry 7 kg, Cd 0.55, D 0.10 m guessed; apogee 3761 m |
 | `examples/benchmark_prusak_v2.py` | HRAP comparison (needs `HYPROP_HRAP_DIR`) |
 | `examples/sensitivity_pe.py`, `examples/report_pe_3km.py` | OAT sensitivity; CSV/XLSX/JSON export + LaTeX report |
 

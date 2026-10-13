@@ -1,8 +1,9 @@
 """1-DOF vertical trajectory check for the sized 0.5 kN PE engine.
 
-Rocket assumptions (TO BE CONFIRMED by the user; scaled from the user's
-06_hybrid_solver 1 kN design): m_dry = 7.0 kg (structure + avionics +
-payload + dry engine + tank), D_ref = 0.10 m, Cd = 0.55 (constant).
+ILLUSTRATIVE ONLY: the rocket mass is not known yet, so the apogee is not
+a design result. Guessed rocket data: m_dry = 7.0 kg (structure +
+avionics + payload + dry engine + tank), D_ref = 0.10 m, Cd = 0.55
+(constant).
 Drag: D = 0.5 * rho_ISA(h) * v^2 * Cd * A_ref. Thrust/mdot from the
 transient simulation of examples/pe_05kN_3km_sized.yaml.
 """
