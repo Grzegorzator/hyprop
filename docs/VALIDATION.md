@@ -1,12 +1,12 @@
 # HyProp – raport walidacji (etap 1)
 
-Wygenerowano: 2026-10-13 20:29, commit `8c8b18a`  
+Wygenerowano: 2026-10-13 20:50, commit `e0c624d`  
 Środowisko: Python 3.11.17 (Linux), numpy 2.4.6, scipy 1.17.1, cantera 3.2.0, CoolProp 8.0.0, rocketcea 1.2.3, pymoo 0.6.2, shapely 2.2.0, pint 0.25.3  
 Polecenie: `python -m validation.run_all` (zmienne środowiskowe: patrz `validation/README.md`).
 
 Zasada: wiersz może mieć PASS tylko przy sprawdzalnym źródle referencji. Brak źródła = `TODO: brak referencji`. INFO = wielkość raportowana bez kryterium.
 
-**Razem: INFO: 38, PASS: 129, TODO: brak referencji: 5**
+**Razem: INFO: 49, PASS: 129, TODO: brak referencji: 2**
 
 ## Podsumowanie etapu 1
 
@@ -38,8 +38,13 @@ Zasada: wiersz może mieć PASS tylko przy sprawdzalnym źródle referencji. Bra
 
 ### Niemożliwe do zwalidowania bez nowych danych
 
-* **Regresja PE/N2O (a, n)**: preset HRAP o nieudokumentowanym pochodzeniu. Korelacje N2O/HDPE z literatury (Kamps 2019, Moon 2019, Doran 2007) nie dały się otworzyć z tej sesji (TODO). Potrzebny pomiar a i n w kilku punktach G_ox na próbie ogniowej. To największa niepewność sizingu.
-* **η_c*, Cd wtryskiwacza, gęstość LDPE i jego krystaliczność** (wpływa na ΔHf, ok. 3 K w Tc): wymagają prób lub pomiarów.
+* **Regresja PE/N2O (a, n)**: preset HRAP (0.104 mm/s, n 0.352) o nieudokumentowanym pochodzeniu. Teraz porównany z literaturą (pkt 6):
+  * Kamps i in. 2019 (N2O/HDPE, G_ox 50–100 kg/m²s): ṙ = 2.52e-5·G^0.76 (history) lub 4.36e-5·G^0.62 (endpoint), w m/s. Preset jest wolniejszy o 16–37 % w tym zakresie. Przy G_ox ≈ 260 kg/m²s (start prusak_v2, ekstrapolacja) jest wolniejszy 1.9–2.3 raza.
+  * Doran 2007 podaje n = 0.331 (za Kampsem), blisko presetu.
+  * Wpływ na przykład 0.5 kN: z prawem Kampsa O/F_iw spada z 6.1 do 3.1–3.6 (silnik bogaty w paliwo, blisko obszaru C/O ≈ 1, gdzie trzeba użyć RocketCEA), a It o 2.5–3 %.
+  * **Wniosek**: n między 0.33 a 0.76 to największa niepewność sizingu. Bez pomiaru a i n dla Waszego PE w kilku punktach G_ox wynik sizingu jest tylko orientacyjny.
+* **η_c***: domyślne 0.95 jest powyżej zakresu zmierzonego przez Kampsa dla N2O/HDPE (87–94 %).
+* **Cd wtryskiwacza, gęstość LDPE i jego krystaliczność** (wpływa na ΔHf, ok. 3 K w Tc): wymagają prób lub pomiarów.
 * **NIST WebBook**: tabeli nie udało się pobrać. Plik CSV wrzucony do `validation/data/nist_n2o_sat.csv` zostanie użyty automatycznie.
 
 ### Błędy znalezione i poprawione w pkt 2–9 (osobne commity `fix(...)`)
@@ -55,7 +60,7 @@ Zasada: wiersz może mieć PASS tylko przy sprawdzalnym źródle referencji. Bra
 ## 0. Zestaw testów (wszystkie opcjonalne backendy zainstalowane)
 
 ```
-131 passed in 52.20s
+131 passed in 61.63s (0:01:01)
 ```
 ## 1. Odtworzenie deklaracji z README
 
@@ -239,17 +244,25 @@ Podsumowanie: INFO: 9, TODO: brak referencji: 1
 
 ## 6. Regresja paliwa – literatura
 
-Podsumowanie: INFO: 2, PASS: 2, TODO: brak referencji: 3
+Podsumowanie: INFO: 13, PASS: 2
 
 | # | Wielkość | Przypadek | Referencja | Źródło referencji | HyProp | Odchyłka | Tolerancja | Status | Komentarz |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | ṙ preset PE/N2O vs HDPE/LOX (Waxman) przy G = 100 | inny utleniacz – tylko skala | 0.4066 mm/s | B. S. Waxman, PhD thesis, Stanford Univ., Table 1.1 (p. 9, za jego ref. [12]); ṙ w mm/s, G w kg/m²s | 0.5261 mm/s | +29.37 % | — | **INFO** | LOX, nie N2O: porównanie rzędu wielkości, nie walidacja. |
-| 2 | ṙ preset PE/N2O vs HDPE/LOX (Waxman) przy G = 300 | inny utleniacz – tylko skala | 0.8036 mm/s | B. S. Waxman, PhD thesis, Stanford Univ., Table 1.1 (p. 9, za jego ref. [12]); ṙ w mm/s, G w kg/m²s | 0.7744 mm/s | -3.63 % | — | **INFO** | LOX, nie N2O: porównanie rzędu wielkości, nie walidacja. |
-| 3 | a, n dla N2O/HDPE z literatury | Kamps et al., Aerospace 6, 45 (2019), doi:10.3390/aerospace6040045 | — |  | — | — | — | **TODO: brak referencji** | Źródło wskazane, ale nieotwarte w tej sesji – brak liczb do porównania. |
-| 4 | a, n dla N2O/HDPE z literatury | Moon et al., Aerospace 6, 28 (2019), doi:10.3390/aerospace6030028 | — |  | — | — | — | **TODO: brak referencji** | Źródło wskazane, ale nieotwarte w tej sesji – brak liczb do porównania. |
-| 5 | a, n dla N2O/HDPE z literatury | Doran et al., AIAA 2007-5352 | — |  | — | — | — | **TODO: brak referencji** | Źródło wskazane, ale nieotwarte w tej sesji – brak liczb do porównania. |
-| 6 | a „parafiny” w presecie HRAP (Paraffin.mat) | HRAP: [0.0304, 0.681] | 3.043e-05 | B. S. Waxman, PhD thesis, Stanford Univ., Table 1.1 (p. 9, za jego ref. [12]); ṙ w mm/s, G w kg/m²s: HTPB/LOX 3.043e-2 mm/s, n 0.681 | 3.04e-05 | -0.10 % | ±0.1 % | **PASS** | Preset HRAP „Paraffin” = HTPB/LOX z tabeli Waxmana (a i n identyczne). Paraffin/N2O w tej tabeli: 15.50e-2 mm/s, n 0.50. Parafina nie jest paliwem projektu. |
-| 7 | Konwencja jednostek a | HRAP propellant_template.m | 0.000104 | HRAP propellant_template.m: ṙ mm/s, G kg/m²s, L m | 0.000104 | +0.00 % | ±0.01 % | **PASS** | a_SI = a_HRAP·1e-3 (sprawdzone też w pkt 1 na CSV HRAP). |
+| 1 | ṙ preset HRAP vs Kamps history (2.52e-5, 0.76) przy G_ox = 50 | PE/N2O, pojedynczy port | 0.4927 mm/s | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s) | 0.4122 mm/s | -16.35 % | — | **INFO** | W zakresie danych Kampsa. |
+| 2 | ṙ preset HRAP vs Kamps endpoint (4.36e-5, 0.62) przy G_ox = 50 | PE/N2O, pojedynczy port | 0.493 mm/s | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s) | 0.4122 mm/s | -16.40 % | — | **INFO** | W zakresie danych Kampsa. |
+| 3 | ṙ preset HRAP vs Kamps history (2.52e-5, 0.76) przy G_ox = 100 | PE/N2O, pojedynczy port | 0.8345 mm/s | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s) | 0.5261 mm/s | -36.96 % | — | **INFO** | W zakresie danych Kampsa. |
+| 4 | ṙ preset HRAP vs Kamps endpoint (4.36e-5, 0.62) przy G_ox = 100 | PE/N2O, pojedynczy port | 0.7577 mm/s | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s) | 0.5261 mm/s | -30.57 % | — | **INFO** | W zakresie danych Kampsa. |
+| 5 | ṙ preset HRAP vs Kamps history (2.52e-5, 0.76) przy G_ox = 260 | PE/N2O, pojedynczy port | 1.725 mm/s | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s) | 0.7364 mm/s | -57.31 % | — | **INFO** | EKSTRAPOLACJA: G_ox na starcie prusak_v2 ≈ 260 kg/m²s, poza zakresem Kampsa (50–100). |
+| 6 | ṙ preset HRAP vs Kamps endpoint (4.36e-5, 0.62) przy G_ox = 260 | PE/N2O, pojedynczy port | 1.37 mm/s | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s) | 0.7364 mm/s | -46.26 % | — | **INFO** | EKSTRAPOLACJA: G_ox na starcie prusak_v2 ≈ 260 kg/m²s, poza zakresem Kampsa (50–100). |
+| 7 | ṙ preset HRAP vs Moon 2019 przy G_o = 100 | PE/N2O, wieloportowe | 0.4571 mm/s | Moon et al., Aerospace 2019, 6, 28, doi:10.3390/aerospace6030028, Eq. (1): r = 0.01·G^0.83 (5-portowe HDPE, N2O; jednostka r nieczytelna – przyjęto mm/s) | 0.5261 mm/s | +15.09 % | — | **INFO** | Średnia czasowo-przestrzenna, ziarno 5-portowe: tylko rząd wielkości. |
+| 8 | ṙ preset HRAP vs Moon 2019 przy G_o = 300 | PE/N2O, wieloportowe | 1.138 mm/s | Moon et al., Aerospace 2019, 6, 28, doi:10.3390/aerospace6030028, Eq. (1): r = 0.01·G^0.83 (5-portowe HDPE, N2O; jednostka r nieczytelna – przyjęto mm/s) | 0.7744 mm/s | -31.93 % | — | **INFO** | Średnia czasowo-przestrzenna, ziarno 5-portowe: tylko rząd wielkości. |
+| 9 | Wykładnik n: preset vs literatura N2O/HDPE | PE/N2O | 0.331 | Doran et al., AIAA JPC 2007 (n = 0.331, G 50–300 kg/m²s) – cytowane przez Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s) | 0.352 | +6.34 % | — | **INFO** | Preset (0.352) bliski Doranowi; Kamps: 0.62 (endpoint) / 0.76 (history). Rozrzut n to główna niepewność sizingu – zmierzyć w kilku punktach G_ox. |
+| 10 | η_c* domyślne vs zmierzone dla N2O/HDPE | SizingOptions.eta_cstar = 0.95 | 0.94 | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Conclusions: ustalone η* 87–94 % | 0.95 | +1.06 % | — | **INFO** | Domyślne 0.95 jest powyżej górnej granicy zmierzonej przez Kampsa (87–94 %). |
+| 11 | ṙ preset vs HDPE/LOX (Waxman) przy G = 100 | inny utleniacz – tylko skala | 0.4066 mm/s | B. S. Waxman, PhD thesis, Stanford Univ., Table 1.1 (p. 9, za jego ref. [12]); ṙ w mm/s, G w kg/m²s | 0.5261 mm/s | +29.37 % | — | **INFO** |  |
+| 12 | a „parafiny” w presecie HRAP (Paraffin.mat) | HRAP: [0.0304, 0.681] | 3.043e-05 | B. S. Waxman, PhD thesis, Stanford Univ., Table 1.1 (p. 9, za jego ref. [12]); ṙ w mm/s, G w kg/m²s: HTPB/LOX 3.043e-2 mm/s, n 0.681 | 3.04e-05 | -0.10 % | ±0.1 % | **PASS** | Preset HRAP „Paraffin” = HTPB/LOX z tabeli Waxmana. Parafina nie jest paliwem projektu. |
+| 13 | Konwencja jednostek a | HRAP propellant_template.m | 0.000104 | HRAP propellant_template.m: ṙ mm/s, G kg/m²s, L m | 0.000104 | +0.00 % | ±0.01 % | **PASS** | a_SI = a_HRAP·1e-3 (sprawdzone też w pkt 1 na CSV HRAP). |
+| 14 | pe_05kN z prawem Kamps history (2.52e-5, 0.76): It / O/F_iw / F_iw | examples/pe_05kN.yaml, ta sama geometria | 3714.5 Ns | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s); HyProp z presetem HRAP | 3610.6 Ns | -2.80 % | — | **INFO** | O/F_iw 6.09 → 3.08; F_iw 445 → 438 N. Geometria dobrana pod preset; z prawem z literatury silnik jest bogatszy w paliwo. |
+| 15 | pe_05kN z prawem Kamps endpoint (4.36e-5, 0.62): It / O/F_iw / F_iw | examples/pe_05kN.yaml, ta sama geometria | 3714.5 Ns | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s); HyProp z presetem HRAP | 3622.9 Ns | -2.47 % | — | **INFO** | O/F_iw 6.09 → 3.56; F_iw 445 → 436 N. Geometria dobrana pod preset; z prawem z literatury silnik jest bogatszy w paliwo. |
 
 ## 8. Zbieżność numeryczna
 
@@ -290,7 +303,7 @@ Podsumowanie: PASS: 10
 Bilans masy utleniacza i paliwa, impuls = ∫F dt, port tylko rośnie, Pc między otoczeniem a zbiornikiem, brak NaN/ujemnych mas, niezależność od jednostek wejścia.
 
 ```
-3 passed in 40.44s
+3 passed in 23.51s
 ```
 ## 2. Ustalenia etapu 1 (pkt 0–1) i ich los
 
