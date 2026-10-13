@@ -301,7 +301,10 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
             p_tank=tank_state.pressure_pa, of=flow["of"] if
             math.isfinite(flow["of"]) else 0.0,
             isp=isp, cstar=cea_point.cstar_m_s * eta_cstar,
-            gamma=cea_point.chamber.gamma,
+            gamma=cea_point.chamber.gamma,          # frozen cp/cv
+            gamma_eq=(cea_point.chamber.gamma_eq
+                      if cea_point.chamber.gamma_eq is not None
+                      else float("nan")),
             t_c=cea_point.chamber.temperature_k,
             mdot_ox=flow["mdot_ox"], mdot_fuel=flow["mdot_fuel"],
             mdot_total=mdot_total, g_flux=flow["g_flux"],

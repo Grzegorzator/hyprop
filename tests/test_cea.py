@@ -91,3 +91,29 @@ def test_cache_hits(backend):
     assert a is b
     assert cached.hits == 1 and cached.misses == 1
     assert len(cached) == 1
+
+
+def test_gamma_definitions_frozen_and_equilibrium():
+    """B3: StationState.gamma is frozen cp/cv, gamma_eq is CEA's GAMMAs.
+
+    Reference values: NASA CEA via RocketCEA for C32H66/N2O at the same
+    point (gamma_fr 1.2472, gamma_s 1.1669) - see docs/VALIDATION.md.
+    """
+    from hyprop.cea.cantera_backend import CanteraBackend
+
+    r = CanteraBackend(fuel="paraffin", oxidizer="n2o").query(6.5, 35e5, 5.0)
+    assert r.chamber.gamma == pytest.approx(1.2472, abs=2e-3)
+    assert r.chamber.gamma_eq == pytest.approx(1.1669, abs=2e-3)
+    assert r.frozen.exit_state.gamma_eq is None
+
+
+def test_backends_agree_on_both_gammas():
+    pytest.importorskip("rocketcea")
+    from hyprop.cea.cantera_backend import CanteraBackend
+    from hyprop.cea.rocketcea_backend import RocketCEABackend
+
+    a = CanteraBackend(fuel="hdpe", oxidizer="n2o").query(6.0, 30e5, 5.0)
+    b = RocketCEABackend(fuel="hdpe", oxidizer="n2o").query(6.0, 30e5, 5.0)
+    assert a.chamber.gamma == pytest.approx(b.chamber.gamma, rel=2e-3)
+    assert a.chamber.gamma_eq == pytest.approx(b.chamber.gamma_eq, rel=2e-3)
+    assert a.cstar_m_s == pytest.approx(b.cstar_m_s, rel=5e-3)

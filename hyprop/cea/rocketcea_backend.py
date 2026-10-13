@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Union
 
+from hyprop.core.constants import R_UNIVERSAL
 from hyprop.core.exceptions import BackendUnavailableError, DataError
 from hyprop.core.logging import get_logger
 from hyprop.core.registry import register_model
@@ -110,22 +111,38 @@ class RocketCEABackend(ThermochemistryBackend):
         t_chamber, t_throat, t_exit = cea.get_Temperatures(
             Pc=pc, MR=of, eps=eps, frozen=0, frozenAtThroat=0
         )
-        mw_c, gamma_c = cea.get_Chamber_MolWt_gamma(Pc=pc, MR=of, eps=eps)
-        mw_t, gamma_t = cea.get_Throat_MolWt_gamma(Pc=pc, MR=of, eps=eps)
-        mw_e, gamma_e = cea.get_exit_MolWt_gamma(Pc=pc, MR=of, eps=eps)
-        cp_c = cea.get_Chamber_Cp(Pc=pc, MR=of, eps=eps)
+        # CEA's get_*_MolWt_gamma return the EQUILIBRIUM exponent GAMMAs;
+        # the frozen cp/cv (HyProp's StationState.gamma) is rebuilt from
+        # the frozen cp: gamma_fr = cp_fr / (cp_fr - R/M).
+        mw_c, gamma_s_c = cea.get_Chamber_MolWt_gamma(Pc=pc, MR=of, eps=eps)
+        mw_t, gamma_s_t = cea.get_Throat_MolWt_gamma(Pc=pc, MR=of, eps=eps)
+        mw_e, gamma_s_e = cea.get_exit_MolWt_gamma(Pc=pc, MR=of, eps=eps)
+        cp_fr_c, cp_fr_t, cp_fr_e = cea.get_HeatCapacities(
+            Pc=pc, MR=of, eps=eps, frozen=1
+        )
+
+        def gamma_frozen(cp_fr: float, mw_g_mol: float) -> float:
+            r_specific = R_UNIVERSAL / (mw_g_mol / 1000.0)
+            return cp_fr / (cp_fr - r_specific)
+
         cstar = cea.get_Cstar(Pc=pc, MR=of)
         pc_over_pe = cea.get_PcOvPe(Pc=pc, MR=of, eps=eps)
         p_exit = pc / pc_over_pe
         p_throat = pc / cea.get_Throat_PcOvPe(Pc=pc, MR=of)
 
-        chamber = StationState(t_chamber, pc, gamma_c, mw_c / 1000.0, cp_c)
-        throat = StationState(t_throat, p_throat, gamma_t, mw_t / 1000.0)
+        chamber = StationState(t_chamber, pc, gamma_frozen(cp_fr_c, mw_c),
+                               mw_c / 1000.0, cp_fr_c, gamma_eq=gamma_s_c)
+        # Throat/exit frozen cp: RocketCEA exposes it only for the frozen
+        # expansion (same composition, slightly different T); used for the
+        # informational frozen gamma at these stations only.
+        throat = StationState(t_throat, p_throat, gamma_frozen(cp_fr_t, mw_c),
+                              mw_t / 1000.0, cp_fr_t, gamma_eq=gamma_s_t)
 
         # -- equilibrium exit: ve = Me * ae ------------------------------
         mach_e = cea.get_MachNumber(Pc=pc, MR=of, eps=eps, frozen=0)
         _, _, a_exit = cea.get_SonicVelocities(Pc=pc, MR=of, eps=eps, frozen=0)
-        exit_eq = StationState(t_exit, p_exit, gamma_e, mw_e / 1000.0)
+        exit_eq = StationState(t_exit, p_exit, gamma_frozen(cp_fr_e, mw_c),
+                               mw_e / 1000.0, cp_fr_e, gamma_eq=gamma_s_e)
         equilibrium = ExpansionResult(exit_eq, mach_e * a_exit)
 
         # -- frozen (from chamber) exit ----------------------------------
@@ -136,7 +153,8 @@ class RocketCEABackend(ThermochemistryBackend):
         mach_fr = cea.get_MachNumber(Pc=pc, MR=of, eps=eps, frozen=1)
         _, _, a_exit_fr = cea.get_SonicVelocities(Pc=pc, MR=of, eps=eps, frozen=1)
         exit_fr = StationState(
-            t_exit_fr, pc / pc_over_pe_fr, gamma_c, mw_c / 1000.0
+            t_exit_fr, pc / pc_over_pe_fr, gamma_frozen(cp_fr_e, mw_c),
+            mw_c / 1000.0, cp_fr_e,
         )
         frozen = ExpansionResult(exit_fr, mach_fr * a_exit_fr)
 

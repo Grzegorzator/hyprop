@@ -28,13 +28,27 @@ _log = get_logger(__name__)
 
 @dataclass(frozen=True)
 class StationState:
-    """Gas state at one nozzle station (chamber / throat / exit)."""
+    """Gas state at one nozzle station (chamber / throat / exit).
+
+    Two isentropic exponents are distinguished explicitly (they differ by
+    ~7 % in a hybrid chamber at ~3300 K, so mixing them is not harmless):
+
+    * ``gamma``    - **frozen** cp/cv of the local mixture (composition held
+      fixed). Same in every backend. This is what ideal-gas nozzle
+      relations with a "chamber gamma" (HRAP tables, user's 07 script) use.
+    * ``gamma_eq`` - **equilibrium** isentropic exponent
+      gamma_s = (d ln p / d ln rho)_s with composition re-equilibrated
+      (NASA CEA "GAMMAs", RP-1311 Eq. 2.71). ``None`` for frozen stations.
+
+    ``cp_j_kg_k`` is the frozen cp, consistent with ``gamma``.
+    """
 
     temperature_k: float
     pressure_pa: float
-    gamma: float                    #: cp/cv at the station [-]
+    gamma: float                    #: frozen cp/cv at the station [-]
     molar_mass_kg_mol: float
-    cp_j_kg_k: Optional[float] = None
+    cp_j_kg_k: Optional[float] = None   #: frozen cp [J/(kg*K)]
+    gamma_eq: Optional[float] = None    #: equilibrium gamma_s [-]
 
     @property
     def r_specific_j_kg_k(self) -> float:

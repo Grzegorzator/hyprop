@@ -153,7 +153,7 @@ class CanteraBackend(ThermochemistryBackend):
              self._ox_species: of / (1.0 + of)},
         )
         gas.equilibrate("HP")
-        chamber = self._station(gas)
+        chamber = self._station(gas, equilibrium=True)
         h_c = gas.enthalpy_mass
         s_c = gas.entropy_mass
         composition_c = dict(
@@ -185,14 +185,33 @@ class CanteraBackend(ThermochemistryBackend):
         )
 
     # ----------------------------------------------------------- helpers
-    def _station(self, gas) -> StationState:
+    def _station(self, gas, equilibrium: bool = False) -> StationState:
         return StationState(
             temperature_k=gas.T,
             pressure_pa=gas.P,
             gamma=gas.cp / gas.cv,
             molar_mass_kg_mol=gas.mean_molecular_weight / 1000.0,
             cp_j_kg_k=gas.cp,
+            gamma_eq=self._gamma_equilibrium(gas) if equilibrium else None,
         )
+
+    @staticmethod
+    def _gamma_equilibrium(gas, rel_dp: float = 1e-4) -> float:
+        """gamma_s = (d ln p / d ln rho)_s at shifting equilibrium.
+
+        Central difference along the isentrope, composition re-equilibrated
+        at both points (definition of CEA's GAMMAs, NASA RP-1311 Eq. 2.71).
+        The gas object is restored to its original (T, P, X) afterwards.
+        """
+        t0, p0, x0 = gas.T, gas.P, gas.X.copy()
+        s0 = gas.entropy_mass
+        rho = []
+        for factor in (1.0 - rel_dp, 1.0 + rel_dp):
+            gas.SP = s0, p0 * factor
+            gas.equilibrate("SP")
+            rho.append(gas.density)
+        gas.TPX = t0, p0, x0
+        return math.log((1.0 + rel_dp) / (1.0 - rel_dp)) / math.log(rho[1] / rho[0])
 
     def _restore_chamber(self, chamber: StationState, composition) -> None:
         self._gas.TPX = (
@@ -239,7 +258,7 @@ class CanteraBackend(ThermochemistryBackend):
         u_t, _, rho_t = self._flow_state(p_throat, h_c, s_c, frozen, composition)
         g_throat = rho_t * u_t                      # mdot / At [kg/(m^2 s)]
         cstar = pc / g_throat                       # c* = pc*At/mdot
-        return self._station(self._gas), g_throat, cstar
+        return self._station(self._gas, equilibrium=not frozen), g_throat, cstar
 
     def _solve_exit(
         self, h_c: float, s_c: float, pc: float, eps: float, g_throat: float,
@@ -270,4 +289,4 @@ class CanteraBackend(ThermochemistryBackend):
                     f"Exit area-ratio eps={eps} not bracketed."
                 ) from exc
         ve, _, _ = self._flow_state(p_exit, h_c, s_c, frozen, composition)
-        return self._station(self._gas), ve
+        return self._station(self._gas, equilibrium=not frozen), ve
