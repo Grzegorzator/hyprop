@@ -83,3 +83,27 @@ def test_brent_matches_fixed_point(stub_cea):
         r_fp.summary["peak_pc_pa"], rel=0.01)
     assert r_br.summary["total_impulse_ns"] == pytest.approx(
         r_fp.summary["total_impulse_ns"], rel=0.02)
+
+
+def test_cea_table_cache_keys_on_exact_eps():
+    """Regression (B1): two eps values that round to the same 2 decimals
+    must get separate tables (formerly crashed api.size)."""
+    import hyprop.simulation.solver as sm
+    from hyprop.core.config import EngineConfig
+
+    old = sm._TABLE_OF, sm._TABLE_PC
+    sm._TABLE_OF, sm._TABLE_PC = 3, 3
+    try:
+        cfg = EngineConfig.from_dict(dict(
+            mission=dict(thrust_n=500.0, burn_time_s=8.0),
+            oxidizer=dict(name="n2o"), fuel=dict(name="hdpe"),
+            grain=dict(geometry="cylindrical", length_m=0.3,
+                       outer_diameter_m=0.06,
+                       port=dict(initial_diameter_m=0.02)),
+        ))
+        a = sm._build_cea_table(cfg, 5.0209)
+        b = sm._build_cea_table(cfg, 5.0167)
+        assert a is not b
+        b.query(6.0, 30e5, 5.0167)          # must not raise
+    finally:
+        sm._TABLE_OF, sm._TABLE_PC = old

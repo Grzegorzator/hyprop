@@ -125,7 +125,10 @@ def _build_components(config: EngineConfig):
     return fuel, fuel_density, geometry, regression, tank, injector
 
 
-#: Process-wide table cache: (fuel, oxidizer, round(eps,2)) -> table.
+#: Process-wide table cache: (fuel, oxidizer, eps, n_of, n_pc) -> table.
+#: eps is keyed at full precision: TabulatedBackend.query rejects any eps
+#: mismatch > 1e-9, so a rounded key (formerly round(eps, 2)) made two
+#: sizing iterations with eps 5.0209 / 5.0167 collide and crash api.size.
 #: Batch/sensitivity runs mutate injector/tank/grain parameters far more
 #: often than propellants or eps; rebuilding the ~20 s Cantera sweep for
 #: every case would dominate runtime.
@@ -136,7 +139,7 @@ def _build_cea_table(config: EngineConfig, eps: float) -> TabulatedBackend:
     """Sweep the Cantera backend over an (O/F, Pc) grid (HRAP pattern)."""
     import numpy as np
 
-    key = (config.fuel.name, config.oxidizer.name, round(eps, 2),
+    key = (config.fuel.name, config.oxidizer.name, float(eps),
            _TABLE_OF, _TABLE_PC)
     cached = _TABLE_CACHE.get(key)
     if cached is not None:
