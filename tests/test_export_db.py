@@ -20,6 +20,7 @@ def bundle():
 
 
 def test_export_tables(tmp_path, bundle):
+    pytest.importorskip("openpyxl")          # XLSX export is optional ([export])
     config, result, rop = bundle
     files = export_result(result, tmp_path, config=config, rop=rop)
     names = {f.name for f in files}

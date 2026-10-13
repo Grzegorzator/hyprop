@@ -37,3 +37,9 @@ include = ["hyprop*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    # GRI-Mech NASA polynomials are fitted to 3000 K; hybrid chamber
+    # equilibria (~3300 K) extrapolate them marginally (cross-checked
+    # against NASA CEA to 0.15 %, docs/VALIDATION.md).
+    "ignore:.*outside valid range.*:UserWarning",
+]

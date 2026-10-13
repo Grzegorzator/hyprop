@@ -43,9 +43,13 @@ def main():
     config = EngineConfig.from_dict(CFG)
     result = api.run(config)
     df = result.history.to_dataframe()
-    ref = pd.read_csv(
-        "/sessions/festive-nice-darwin/mnt/HRAP/application/output/"
-        "prusakv2_HRAP_output.csv")
+    import os
+    hrap_dir = os.environ.get("HYPROP_HRAP_DIR")
+    if not hrap_dir:
+        sys.exit("Set HYPROP_HRAP_DIR to the HRAP 'application' folder "
+                 "(contains output/prusakv2_HRAP_output.csv).")
+    ref = pd.read_csv(os.path.join(hrap_dir, "output",
+                                   "prusakv2_HRAP_output.csv"))
     ref.columns = [c.strip() for c in ref.columns]
 
     # --- compare on common time base (liquid phase + tail) --------------
@@ -105,8 +109,9 @@ def main():
     for a in ax.flat: a.grid(alpha=0.3)
     fig.suptitle("HyProp vs HRAP - prusak_v2 (HDPE/N2O)")
     fig.tight_layout()
-    fig.savefig("examples/benchmark_prusak_v2.png", dpi=110)
-    print("Saved examples/benchmark_prusak_v2.png")
+    os.makedirs("outputs", exist_ok=True)
+    fig.savefig("outputs/benchmark_prusak_v2.png", dpi=110)
+    print("Saved outputs/benchmark_prusak_v2.png")
 
 if __name__ == "__main__":
     main()

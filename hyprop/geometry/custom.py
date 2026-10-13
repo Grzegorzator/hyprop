@@ -63,7 +63,7 @@ class ContourGrain(GrainGeometry):
             raise ConfigError("Contour polygon is invalid or degenerate.")
         bore_radius = 0.5 * outer_diameter_m
         self._bore = Point(0.0, 0.0).buffer(
-            bore_radius, resolution=_BUFFER_RESOLUTION
+            bore_radius, quad_segs=_BUFFER_RESOLUTION
         )
         if not self._bore.contains(self._port0):
             raise ConfigError("Initial contour must lie inside the bore.")
@@ -73,7 +73,7 @@ class ContourGrain(GrainGeometry):
     def _offset_port(self, w: float):
         if w <= 0.0:
             return self._port0
-        return self._port0.buffer(w, resolution=_BUFFER_RESOLUTION)
+        return self._port0.buffer(w, quad_segs=_BUFFER_RESOLUTION)
 
     def _clipped(self, w: float):
         return self._offset_port(w).intersection(self._bore)
