@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hyprop"
-version = "0.1.0"
+version = "0.2.0"
 description = "Hybrid Rocket Preliminary Sizing & Analysis Environment"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "MASSLACZEK12" }]
 dependencies = [
@@ -27,8 +27,17 @@ cantera = ["cantera>=3.0"]
 props = ["CoolProp>=6.6"]
 opt = ["pymoo>=0.6", "SALib>=1.4"]
 export = ["openpyxl>=3.1", "jinja2>=3.1.2"]
-dev = ["pytest>=7.4", "pytest-cov", "hypothesis>=6.0"]
-validation = ["cea>=3.3; python_version >= '3.11'"]
+validation = ["cea>=3.3"]
+
+[dependency-groups]
+# uv: `uv sync` installs the dev group by default.
+dev = [
+    "pytest>=7.4",
+    "pytest-cov",
+    "hypothesis>=6.0",
+    "ruff>=0.15",
+    "mypy>=1.10",
+]
 
 [tool.setuptools.packages.find]
 include = ["hyprop*"]
@@ -38,6 +47,8 @@ include = ["hyprop*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# tests import shared fixtures as `tests.<module>`
+pythonpath = ["."]
 markers = [
     "slow: long-running tests (golden references); deselect with -m 'not slow'",
 ]
@@ -47,3 +58,24 @@ filterwarnings = [
     # against NASA CEA to 0.15 %, docs/VALIDATION.md).
     "ignore:.*outside valid range.*:UserWarning",
 ]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["outputs"]
+
+[tool.ruff.lint]
+# Explicit rule set: ruff's default selection changes between versions.
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+explicit_package_bases = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# NASA `cea` ships a .pyi stub that is not valid Python syntax.
+module = ["cea", "cea.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
