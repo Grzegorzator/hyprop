@@ -12,9 +12,17 @@ Each time step couples five models (ARCHITECTURE.md par. 4):
    where mdot_fuel follows from regression at the current Pc via
    G -> rdot -> mdot_fuel. Solved by damped fixed-point iteration
    (HRAP; user's 06_hybrid_solver, default) or Brent on the residual.
-4. **Thrust** from the tabulated CEA expansion at the current O/F:
+4. **Thrust** from the tabulated CEA expansion at the current O/F and
+   the correction-factor convention of Sutton & Biblarz (9th ed.,
+   Sec. 3.5, Eqs. 3-40/3-41):
 
-       F = eta_noz * mdot * ve + (pe - pa) * Ae
+       c_i = ve + (pe - pa) * eps * c*_i / Pc     (ideal, at ambient pa)
+       F   = eta_c* * eta_noz * mdot * c_i        (zeta_v = zeta_c* zeta_CF)
+
+   eta_noz = divergence lambda(alpha) * nozzle.efficiency (zeta_CF).
+   Before v0.2 the combustion efficiency entered only Pc, not F, so a
+   better combustion lowered thrust (dF/deta_c* < 0) - same as HRAP
+   (Nickel, Eqs. 20-24), whose Ve uses the ideal Tc.
 
 5. **Geometry update**: w += rdot * dt; tank steps by mdot_ox * dt.
 
@@ -43,6 +51,10 @@ from hyprop.core.logging import get_logger
 from hyprop.core.registry import autodiscover, get_model
 from hyprop.core.state import TimeHistory
 from hyprop.data import load_fuel
+from hyprop.performance.metrics import (
+    delivered_thrust,
+    ideal_effective_exhaust_velocity,
+)
 from hyprop.geometry.base import GrainGeometry
 from hyprop.injector.base import InjectorModel
 from hyprop.regression.power_law import PowerLawRegression
@@ -175,7 +187,6 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
         raise ConfigError("nozzle.expansion_ratio is required for E6 runs.")
     throat_area = math.pi * (0.5 * config.nozzle.throat_diameter_m) ** 2
     eps = config.nozzle.expansion_ratio
-    exit_area = throat_area * eps
     ambient = config.mission.ambient_pressure_pa or P_ATM_SL
     eta_cstar = config.efficiencies.eta_cstar
     from hyprop.nozzle.losses import nozzle_efficiency
@@ -295,11 +306,14 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
                                         cea.pc_range[1]), eps)
         mdot_total = flow["mdot_ox"] + flow["mdot_fuel"]
         exp = cea_point.equilibrium
-        thrust_n = (
-            eta_noz * mdot_total * exp.exhaust_velocity_m_s
-            + (exp.exit_state.pressure_pa - ambient) * exit_area
-        )
-        thrust_n = max(thrust_n, 0.0)
+        pc_query = cea_point.pc_pa
+        # pe scales with Pc at fixed eps; rescale if Pc was clamped to table
+        pe = exp.exit_state.pressure_pa * (pc / pc_query)
+        c_ideal = ideal_effective_exhaust_velocity(
+            exp.exhaust_velocity_m_s, pe, ambient, eps,
+            cea_point.cstar_m_s, pc)
+        thrust_n = max(delivered_thrust(mdot_total, c_ideal,
+                                        eta_cstar, eta_noz), 0.0)
         impulse += thrust_n * dt
         isp = thrust_n / (mdot_total * G0) if mdot_total > 0 else 0.0
 

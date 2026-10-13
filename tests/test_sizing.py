@@ -57,9 +57,11 @@ def test_inverse_sizing_converges(monkeypatch):
     monkeypatch.setattr(solver_module, "_build_cea_table",
                         lambda config, eps: _StubCEA())
     from hyprop.sizing import size_engine
+    from hyprop.sizing.preliminary import SizingOptions
 
     sized = size_engine(thrust_n=500.0, total_impulse_ns=4000.0,
-                        apogee_m=3000.0)
+                        apogee_m=3000.0,
+                        options=SizingOptions(nozzle_from_cea=False))
     achieved = sized.achieved
     assert achieved["thrust_iw_n"] == pytest.approx(500.0, rel=0.05)
     assert achieved["total_impulse_ns"] == pytest.approx(4000.0, rel=0.05)
@@ -67,3 +69,19 @@ def test_inverse_sizing_converges(monkeypatch):
     assert sized.nozzle.design_altitude_m == pytest.approx(1000.0)
     assert sized.config.grain.length_m > 0.1
     assert sized.config.tank.oxidizer_mass_kg > 0.5
+
+
+def test_nozzle_eps_from_cea_matches_equilibrium_expansion():
+    """eps from the CEA expansion: pe(eps) = pa at the design altitude.
+    Reference: CEA/Cantera eps_opt = 5.14 for C32H66/N2O, 35 bar, O/F 6.5,
+    pa = 1.013 bar (docs/VALIDATION.md); ideal frozen-gamma formula: 4.99."""
+    pytest.importorskip("cantera")
+    from hyprop.cea.cantera_backend import CanteraBackend
+    from hyprop.oppoints.design_points import OperatingPoint
+
+    cea = CanteraBackend(fuel="paraffin", oxidizer="n2o")
+    point = OperatingPoint("d", {"pc": 35e5, "of": 6.5, "gamma": 1.247})
+    nz = size_nozzle(point, 500.0, design_altitude_m=0.0, cea=cea)
+    r = cea.query(6.5, 35e5, nz.expansion_ratio)
+    assert r.equilibrium.exit_state.pressure_pa == pytest.approx(101325.0, rel=1e-3)
+    assert nz.expansion_ratio == pytest.approx(5.14, abs=0.02)

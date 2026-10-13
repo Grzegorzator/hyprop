@@ -141,3 +141,30 @@ def test_cea_backend_setting_is_honoured(monkeypatch):
     sm._TABLE_CACHE.clear()
     assert seen == ["rocketcea"]
     assert table.name == "tabulated[fake]"
+
+
+def test_thrust_uses_sutton_correction_factors(stub_cea):
+    """B4: F = eta_c* * eta_noz * mdot * c_i  (Sutton 9th ed. Eqs. 3-40/41),
+    c_i = ve + (pe - pa) * eps * c*_i / Pc. Checked step by step."""
+    import numpy as np
+    from hyprop.nozzle.losses import nozzle_efficiency
+
+    cfg = EngineConfig.from_dict(CFG)
+    h = solver_module.run_simulation(cfg).history
+    eta_noz = nozzle_efficiency(cfg.nozzle.divergence_half_angle_deg,
+                                cfg.nozzle.efficiency)
+    c_i = 2200.0 + (0.4e5 - 101325.0) * 5.3 * 1550.0 / h["pc"]
+    expected = np.maximum(cfg.efficiencies.eta_cstar * eta_noz
+                          * h["mdot_total"] * c_i, 0.0)
+    np.testing.assert_allclose(h["thrust"], expected, rtol=1e-12)
+
+
+def test_better_combustion_raises_isp(stub_cea):
+    """B4 regression: with the old formulation dIsp/deta_c* was ~0 and
+    dF/deta_c* < 0. Delivered Isp must scale ~ with eta_c*."""
+    def isp(eta):
+        raw = dict(CFG); raw["efficiencies"] = dict(eta_cstar=eta)
+        return solver_module.run_simulation(
+            EngineConfig.from_dict(raw)).summary["isp_mean_s"]
+    ratio = isp(0.95) / isp(0.85)
+    assert ratio == pytest.approx(0.95 / 0.85, rel=0.03)
