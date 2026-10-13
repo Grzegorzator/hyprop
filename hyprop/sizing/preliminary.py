@@ -5,15 +5,18 @@ Algorithm:
 1. **Analytic first guess** (Sutton/Humble relations at assumed Pc):
    mdot from F/(Isp_est*g0); throat from Cf; oxidizer mass from It;
    port diameter from a max-flux limit G_ox0; grain length from the
-   regression law matched to the target O/F; injector area from a
+   regression law matched to the target O/F (default: the Isp-optimal
+   O/F from the backend); injector area from a
    pressure-drop ratio (dP ~ 25-35% of Pc for feed stability).
 2. **Simulation refinement loop**: run the transient, take the
    impulse-weighted ROP point, and rescale
       - oxidizer mass by It_target/It (with tank volume),
       - injector area to keep the design mdot_ox,
+      - grain length to move the impulse-weighted O/F to the target,
       - throat area by F_target/F_iw at fixed Pc,
       - nozzle eps re-adapted to the design altitude each pass.
-   Repeats until F_iw and It are within tolerance (default 1%).
+   Repeats until F_iw and It are within tolerance (default 1 %) and
+   O/F_iw within 2 %.
 
 Stability guards baked in (reported, not silently fixed): initial
 oxidizer flux G_ox0 <= 500 kg/m^2/s (flooding), injector dP/Pc >= 0.20
@@ -52,7 +55,6 @@ DP_OVER_PC = 0.30  # injector pressure-drop ratio at design
 ISP_ESTIMATE_S = 210.0  # first-guess delivered Isp
 #: gamma for the ideal-gas eps estimate used only to locate the optimum O/F
 GAMMA_EPS_ESTIMATE = 1.22
-OF_BELOW_OPTIMUM = 0.85  # first guess: O/F falls during a blowdown burn
 WEB_MARGIN = 1.25  # OD sized for 25% web reserve
 FILL_FRACTION = 0.85  # tank liquid volume fill at loading
 
@@ -63,8 +65,9 @@ class SizingOptions:
 
     Attributes:
         pc_design_pa: Design chamber pressure [Pa].
-        of_design: First-guess design O/F; None uses 0.85 x the Isp-optimal
+        of_design: Target impulse-weighted O/F; None uses the Isp-optimal
             O/F of the propellant pair (:func:`hyprop.sizing.mixture.optimal_of`).
+            The loop holds it by adjusting the grain length.
         g_ox0: Initial port oxidizer flux [kg/(m^2*s)].
         injector_cd: Injector orifice discharge coefficient [-].
         orifice_diameter_m: Injector orifice diameter [m].
@@ -79,10 +82,11 @@ class SizingOptions:
         max_iterations: Limit of the simulation refinement loop.
         tolerance: Relative tolerance on impulse-weighted thrust and on
             total impulse.
+        of_tolerance: Relative tolerance on the impulse-weighted O/F.
     """
 
     pc_design_pa: float = PC_DESIGN_DEFAULT
-    of_design: float | None = None  # None -> 0.85 x Isp-optimal O/F
+    of_design: float | None = None  # target O/F_iw; None -> Isp-optimal O/F
     g_ox0: float = 400.0  # initial port flux [kg/m^2/s]
     injector_cd: float = 0.60
     orifice_diameter_m: float = 1.5e-3
@@ -93,6 +97,7 @@ class SizingOptions:
     nozzle_from_cea: bool = True  # eps/Cf from CEA expansion (else ideal gas)
     max_iterations: int = 20
     tolerance: float = 0.01  # on F_iw and It
+    of_tolerance: float = 0.02  # on O/F_iw
 
 
 @dataclass
@@ -175,11 +180,8 @@ def size_engine(
         assert thermo is not None
         pa_design = atmosphere.pressure(h_design)
         eps_estimate = optimum_expansion_ratio(opts.pc_design_pa / pa_design, GAMMA_EPS_ESTIMATE)
-        of_opt = optimal_of(thermo, opts.pc_design_pa, eps_estimate, pa_design)
-        of_design = OF_BELOW_OPTIMUM * of_opt
-        _log.info(
-            "Isp-optimal O/F = %.2f (eps %.2f); first guess %.2f", of_opt, eps_estimate, of_design
-        )
+        of_design = optimal_of(thermo, opts.pc_design_pa, eps_estimate, pa_design)
+        _log.info("Target O/F_iw = Isp-optimal O/F = %.2f (eps %.2f)", of_design, eps_estimate)
     mdot_ox = mdot_total * of_design / (1.0 + of_design)
     mdot_fuel = mdot_total - mdot_ox
     burn_time = total_impulse_ns / thrust_n
@@ -263,23 +265,31 @@ def size_engine(
         f_iw = iw["thrust"]
         err_f = f_iw / thrust_n - 1.0
         err_it = it / total_impulse_ns - 1.0
+        err_of = iw["of"] / of_design - 1.0
         _log.info(
-            "Sizing iter %d: F_iw=%.0f N (%+.1f%%), It=%.0f Ns (%+.1f%%)",
+            "Sizing iter %d: F_iw=%.0f N (%+.1f%%), It=%.0f Ns (%+.1f%%), O/F_iw=%.2f (%+.1f%%)",
             iteration,
             f_iw,
             100 * err_f,
             it,
             100 * err_it,
+            iw["of"],
+            100 * err_of,
         )
         achieved = dict(
             thrust_iw_n=f_iw,
             total_impulse_ns=it,
             pc_iw_pa=iw["pc"],
             of_iw=iw["of"],
+            of_target=of_design,
             isp_iw_s=iw["isp"],
             lro_s=result.event_time("liquid_runout") or 0.0,
         )
-        if abs(err_f) < opts.tolerance and abs(err_it) < opts.tolerance:
+        if (
+            abs(err_f) < opts.tolerance
+            and abs(err_it) < opts.tolerance
+            and abs(err_of) < opts.of_tolerance
+        ):
             break
         # --- rescale toward targets ------------------------------------
         # In a blowdown, thrust is governed by the injector (mdot_ox),
@@ -288,7 +298,9 @@ def size_engine(
         # at the new impulse-weighted point to hold the design Pc.
         factor_f = thrust_n / max(f_iw, 1.0)
         orifice_d *= math.sqrt(factor_f)
-        grain_length *= factor_f ** (1.0 - regression.n)  # keep O/F
+        # mdot_fuel ~ L at fixed port flux and O/F ~ 1/L: the first factor
+        # keeps O/F when mdot_ox scales, the second moves O/F_iw to target.
+        grain_length *= factor_f ** (1.0 - regression.n) * (1.0 + err_of)
         m_ox *= factor_f / (1.0 + err_it)
         tank_volume *= factor_f / (1.0 + err_it)
         # Throat sized at the FIXED design Pc (gamma from the iw point);
@@ -305,7 +317,7 @@ def size_engine(
         warnings.append(
             f"Sizing did not reach {opts.tolerance:.0%} in "
             f"{opts.max_iterations} iterations (last F {err_f:+.1%}, "
-            f"It {err_it:+.1%})."
+            f"It {err_it:+.1%}, O/F {err_of:+.1%})."
         )
 
     # ------------------------- guard reports ----------------------------

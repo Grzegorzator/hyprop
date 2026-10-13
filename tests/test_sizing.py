@@ -74,6 +74,9 @@ def test_inverse_sizing_converges(monkeypatch):
     achieved = sized.achieved
     assert achieved["thrust_iw_n"] == pytest.approx(500.0, rel=0.05)
     assert achieved["total_impulse_ns"] == pytest.approx(4000.0, rel=0.05)
+    # the loop holds the impulse-weighted O/F at the requested target:
+    assert achieved["of_target"] == 6.97
+    assert achieved["of_iw"] == pytest.approx(6.97, rel=0.02)
     # nozzle adapted at ~1000 m for the 3 km mission:
     assert sized.nozzle.design_altitude_m == pytest.approx(1000.0)
     assert sized.config.grain.length_m > 0.1
