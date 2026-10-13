@@ -27,7 +27,7 @@ cantera = ["cantera>=3.0"]
 props = ["CoolProp>=6.6"]
 opt = ["pymoo>=0.6", "SALib>=1.4"]
 export = ["openpyxl>=3.1", "jinja2>=3.1.2"]
-dev = ["pytest>=7.4", "pytest-cov"]
+dev = ["pytest>=7.4", "pytest-cov", "hypothesis>=6.0"]
 validation = ["cea>=3.3; python_version >= '3.11'"]
 
 [tool.setuptools.packages.find]
