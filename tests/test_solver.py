@@ -145,16 +145,16 @@ def test_cea_backend_setting_is_honoured(monkeypatch):
 
 def test_thrust_uses_sutton_correction_factors(stub_cea):
     """B4: F = eta_c* * eta_noz * mdot * c_i  (Sutton 9th ed. Eqs. 3-40/41),
-    c_i = ve + (pe - pa) * eps * c*_i / Pc. Checked step by step."""
+    c_i = lambda*ve + (pe - pa)*eps*c*_i/Pc (lambda on momentum only,
+    Eq. 3-34). Checked step by step."""
     import numpy as np
-    from hyprop.nozzle.losses import nozzle_efficiency
+    from hyprop.nozzle.losses import divergence_efficiency
 
     cfg = EngineConfig.from_dict(CFG)
     h = solver_module.run_simulation(cfg).history
-    eta_noz = nozzle_efficiency(cfg.nozzle.divergence_half_angle_deg,
-                                cfg.nozzle.efficiency)
-    c_i = 2200.0 + (0.4e5 - 101325.0) * 5.3 * 1550.0 / h["pc"]
-    expected = np.maximum(cfg.efficiencies.eta_cstar * eta_noz
+    lam = divergence_efficiency(cfg.nozzle.divergence_half_angle_deg)
+    c_i = lam * 2200.0 + (0.4e5 - 101325.0) * 5.3 * 1550.0 / h["pc"]
+    expected = np.maximum(cfg.efficiencies.eta_cstar * cfg.nozzle.efficiency
                           * h["mdot_total"] * c_i, 0.0)
     np.testing.assert_allclose(h["thrust"], expected, rtol=1e-12)
 

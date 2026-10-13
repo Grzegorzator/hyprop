@@ -9,9 +9,12 @@ cone lambda = 0.9830. Bell nozzles are treated via an equivalent
 efficiency (to be extended at E8 with length-fraction correlations,
 Rao / Sutton Ch. 3).
 
-The total nozzle efficiency multiplies the momentum term of thrust:
+In the transient (Sutton Sec. 3.5 correction factors, Eq. 3-34 note):
 
-    F = lambda * eta_nozzle * mdot * ve + (pe - pa) * Ae
+    F = eta_c* * eta_nozzle * mdot * [lambda * ve + (pe - pa) * eps * c* / pc]
+
+lambda multiplies the momentum term only; eta_nozzle (other losses) the
+whole delivered C_F.
 """
 
 from __future__ import annotations

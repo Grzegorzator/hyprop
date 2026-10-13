@@ -16,10 +16,11 @@ Each time step couples five models (ARCHITECTURE.md par. 4):
    the correction-factor convention of Sutton & Biblarz (9th ed.,
    Sec. 3.5, Eqs. 3-40/3-41):
 
-       c_i = ve + (pe - pa) * eps * c*_i / Pc     (ideal, at ambient pa)
-       F   = eta_c* * eta_noz * mdot * c_i        (zeta_v = zeta_c* zeta_CF)
+       c_i = lambda*ve + (pe - pa)*eps*c*_i/Pc   (ideal, at ambient pa)
+       F   = eta_c* * eta_noz * mdot * c_i      (zeta_v = zeta_c* zeta_CF)
 
-   eta_noz = divergence lambda(alpha) * nozzle.efficiency (zeta_CF).
+   lambda(alpha) = conical divergence factor, momentum term only (Sutton
+   Eq. 3-34); eta_noz = nozzle.efficiency (other nozzle losses, zeta_CF).
    Before v0.2 the combustion efficiency entered only Pc, not F, so a
    better combustion lowered thrust (dF/deta_c* < 0) - same as HRAP
    (Nickel, Eqs. 20-24), whose Ve uses the ideal Tc.
@@ -189,11 +190,10 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
     eps = config.nozzle.expansion_ratio
     ambient = config.mission.ambient_pressure_pa or P_ATM_SL
     eta_cstar = config.efficiencies.eta_cstar
-    from hyprop.nozzle.losses import nozzle_efficiency
+    from hyprop.nozzle.losses import divergence_efficiency
 
-    eta_noz = nozzle_efficiency(
-        config.nozzle.divergence_half_angle_deg, config.nozzle.efficiency
-    )
+    divergence = divergence_efficiency(config.nozzle.divergence_half_angle_deg)
+    eta_noz = config.nozzle.efficiency
     cd_nozzle = config.nozzle.discharge_coefficient   # HRAP noz_Cd
 
     cea = _build_cea_table(config, eps)
@@ -311,7 +311,7 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
         pe = exp.exit_state.pressure_pa * (pc / pc_query)
         c_ideal = ideal_effective_exhaust_velocity(
             exp.exhaust_velocity_m_s, pe, ambient, eps,
-            cea_point.cstar_m_s, pc)
+            cea_point.cstar_m_s, pc, divergence)
         thrust_n = max(delivered_thrust(mdot_total, c_ideal,
                                         eta_cstar, eta_noz), 0.0)
         impulse += thrust_n * dt

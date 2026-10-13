@@ -3,7 +3,8 @@
 Inputs come exclusively from an ROP operating point (ARCHITECTURE.md
 principle 8), by default the impulse-weighted point:
 
-* throat: At = F / (lambda*eta*Cd*Cf_i * Pc)            (Sutton Eq. 3-31)
+* throat: At = F / (eta*Cd*Cf_i,lambda * Pc), lambda on the momentum
+  term of Cf only                                      (Sutton Eqs. 3-31, 3-34)
 * expansion: eps such that pe = pa(design altitude)     (optimum, Eq. 3-25),
   from the CEA shifting-equilibrium expansion when a backend is given
 * exit diameter, delivered Cf with divergence loss.
@@ -86,7 +87,7 @@ def size_nozzle(
     efficiency, discharge_coefficient:
         Same meaning as ``nozzle.efficiency`` / ``nozzle.discharge_coefficient``
         in the transient, so that the sized throat delivers the target
-        thrust at the design Pc: F = lambda*eta*Cd*Cf_i*Pc*At (the c*
+        thrust at the design Pc: F = eta*Cd*Cf_i,lambda*Pc*At (the c*
         efficiency cancels at fixed Pc, Sutton 9th ed. Eqs. 3-31, 3-40).
     cea:
         Thermochemistry backend. When given (and ``point`` has ``of``),
@@ -115,7 +116,7 @@ def size_nozzle(
         def cf_ideal(pa: float) -> float:
             c_i = ideal_effective_exhaust_velocity(
                 r.equilibrium.exhaust_velocity_m_s, pe, pa, eps,
-                r.cstar_m_s, pc)
+                r.cstar_m_s, pc, lam)
             return c_i / r.cstar_m_s
         cf_i_design, cf_i_sl = cf_ideal(pa_design), cf_ideal(pa_sl)
     else:
@@ -123,11 +124,15 @@ def size_nozzle(
         eps = optimum_expansion_ratio(pc / pa_design, gamma)
         pe_over_pc = exit_pressure_ratio(eps, gamma)
         pe = pe_over_pc * pc
-        cf_i_design = thrust_coefficient(gamma, eps, pe_over_pc, pa_design / pc)
-        cf_i_sl = thrust_coefficient(gamma, eps, pe_over_pc, pa_sl / pc)
+        cf_momentum = thrust_coefficient(gamma, eps, pe_over_pc, pe_over_pc)
 
-    cf_design = lam * efficiency * cf_i_design
-    cf_sl = lam * efficiency * cf_i_sl
+        def cf_ideal(pa: float) -> float:
+            return lam * cf_momentum + (pe_over_pc - pa / pc) * eps
+        cf_i_design, cf_i_sl = cf_ideal(pa_design), cf_ideal(pa_sl)
+
+    # lambda is already inside cf_i (momentum term only, Sutton Eq. 3-34)
+    cf_design = efficiency * cf_i_design
+    cf_sl = efficiency * cf_i_sl
     throat_area = thrust_target_n / (cf_design * discharge_coefficient * pc)
     throat_d = 2.0 * math.sqrt(throat_area / math.pi)
     exit_d = throat_d * math.sqrt(eps)

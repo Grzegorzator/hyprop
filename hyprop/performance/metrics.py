@@ -40,14 +40,17 @@ def ideal_effective_exhaust_velocity(
     expansion_ratio: float,
     cstar_ideal_m_s: float,
     pc_pa: float,
+    divergence: float = 1.0,
 ) -> float:
     """Ideal effective exhaust velocity c_i [m/s] at the operating ambient.
 
-    c_i = v_e + (p_e - p_a) * A_e / mdot_i, with A_e/mdot_i = eps*c*_i/p_c
-    (ideal mass flow mdot_i = p_c*A_t/c*_i; Sutton & Biblarz 9th ed.,
-    Eqs. 2-16, 3-24, 3-32: c = c* C_F).
+    c_i = lambda * v_e + (p_e - p_a) * A_e / mdot_i,
+    A_e/mdot_i = eps*c*_i/p_c (ideal mass flow mdot_i = p_c*A_t/c*_i;
+    Sutton & Biblarz 9th ed., Eqs. 2-16, 3-24, 3-32: c = c* C_F).
+    The conical divergence factor ``lambda`` multiplies the momentum term
+    only, not the pressure term (Sutton Eq. 3-34 and the note below it).
     """
-    return exhaust_velocity_m_s + (
+    return divergence * exhaust_velocity_m_s + (
         exit_pressure_pa - ambient_pressure_pa
     ) * expansion_ratio * cstar_ideal_m_s / pc_pa
 
