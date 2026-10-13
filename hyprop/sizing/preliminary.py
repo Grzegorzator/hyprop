@@ -5,15 +5,18 @@ Algorithm:
 1. **Analytic first guess** (Sutton/Humble relations at assumed Pc):
    mdot from F/(Isp_est*g0); throat from Cf; oxidizer mass from It;
    port diameter from a max-flux limit G_ox0; grain length from the
-   regression law matched to the target O/F; injector area from a
+   regression law matched to the target O/F (default: the Isp-optimal
+   O/F from the backend); injector area from a
    pressure-drop ratio (dP ~ 25-35% of Pc for feed stability).
 2. **Simulation refinement loop**: run the transient, take the
    impulse-weighted ROP point, and rescale
       - oxidizer mass by It_target/It (with tank volume),
       - injector area to keep the design mdot_ox,
+      - grain length to move the impulse-weighted O/F to the target,
       - throat area by F_target/F_iw at fixed Pc,
       - nozzle eps re-adapted to the design altitude each pass.
-   Repeats until F_iw and It are within tolerance (default 1%).
+   Repeats until F_iw and It are within tolerance (default 1 %) and
+   O/F_iw within 2 %.
 
 Stability guards baked in (reported, not silently fixed): initial
 oxidizer flux G_ox0 <= 500 kg/m^2/s (flooding), injector dP/Pc >= 0.20
@@ -39,6 +42,8 @@ from hyprop.nozzle.sizing import (
 )
 from hyprop.oppoints import analyze
 from hyprop.physics import atmosphere
+from hyprop.physics.compressible import optimum_expansion_ratio
+from hyprop.sizing.mixture import optimal_of
 from hyprop.tank.n2o_properties import ESDU91022
 
 _log = get_logger(__name__)
@@ -48,7 +53,11 @@ PC_DESIGN_DEFAULT = 32e5  # [Pa] target liquid-phase chamber pressure
 G_OX0_MAX = 450.0  # [kg/m^2/s] initial oxidizer flux limit
 DP_OVER_PC = 0.30  # injector pressure-drop ratio at design
 ISP_ESTIMATE_S = 210.0  # first-guess delivered Isp
+#: gamma for the ideal-gas eps estimate used only to locate the optimum O/F
+GAMMA_EPS_ESTIMATE = 1.22
 WEB_MARGIN = 1.25  # OD sized for 25% web reserve
+#: nozzle adaptation altitude when neither design altitude nor apogee is given
+DEFAULT_DESIGN_ALTITUDE_M = 0.0
 FILL_FRACTION = 0.85  # tank liquid volume fill at loading
 
 
@@ -58,8 +67,9 @@ class SizingOptions:
 
     Attributes:
         pc_design_pa: Design chamber pressure [Pa].
-        of_design: First-guess design O/F; None uses 0.85 x 8.2 = 6.97
-            (8.2 is a hard-coded optimum O/F, not looked up per propellant).
+        of_design: Target impulse-weighted O/F; None uses the Isp-optimal
+            O/F of the propellant pair (:func:`hyprop.sizing.mixture.optimal_of`).
+            The loop holds it by adjusting the grain length.
         g_ox0: Initial port oxidizer flux [kg/(m^2*s)].
         injector_cd: Injector orifice discharge coefficient [-].
         orifice_diameter_m: Injector orifice diameter [m].
@@ -74,10 +84,11 @@ class SizingOptions:
         max_iterations: Limit of the simulation refinement loop.
         tolerance: Relative tolerance on impulse-weighted thrust and on
             total impulse.
+        of_tolerance: Relative tolerance on the impulse-weighted O/F.
     """
 
     pc_design_pa: float = PC_DESIGN_DEFAULT
-    of_design: float | None = None  # None -> near optimum - 15%
+    of_design: float | None = None  # target O/F_iw; None -> Isp-optimal O/F
     g_ox0: float = 400.0  # initial port flux [kg/m^2/s]
     injector_cd: float = 0.60
     orifice_diameter_m: float = 1.5e-3
@@ -88,6 +99,7 @@ class SizingOptions:
     nozzle_from_cea: bool = True  # eps/Cf from CEA expansion (else ideal gas)
     max_iterations: int = 20
     tolerance: float = 0.01  # on F_iw and It
+    of_tolerance: float = 0.02  # on O/F_iw
 
 
 @dataclass
@@ -115,7 +127,7 @@ class SizingResult:
 def size_engine(
     thrust_n: float,
     total_impulse_ns: float,
-    apogee_m: float,
+    apogee_m: float | None = None,
     fuel: str = "ldpe",
     oxidizer: str = "n2o",
     temperature_k: float = 293.15,
@@ -123,7 +135,7 @@ def size_engine(
     options: SizingOptions | None = None,
     _runner=None,
 ) -> SizingResult:
-    """Size an engine for a mission: (F, It, apogee) -> converged config.
+    """Size an engine for a mission: (F, It) -> converged config.
 
     Analytic first guess, then a transient-simulation loop that rescales
     oxidizer load, injector, grain and throat until the impulse-weighted
@@ -132,11 +144,14 @@ def size_engine(
     Args:
         thrust_n: Required impulse-weighted thrust [N].
         total_impulse_ns: Required total impulse [N*s].
-        apogee_m: Target apogee [m].
+        apogee_m: Target apogee [m], optional. Used only for the default
+            nozzle design altitude (apogee/3) and recorded in the config.
         fuel: Fuel database key (default LDPE).
         oxidizer: Oxidizer database key.
         temperature_k: Initial tank temperature [K].
-        design_altitude_m: Nozzle adaptation altitude [m]; default apogee/3.
+        design_altitude_m: Nozzle adaptation altitude (p_e = p_a) [m].
+            Takes precedence over ``apogee_m``; if neither is given the
+            nozzle is adapted at sea level (0 m ISA).
         options: Sizing assumptions; defaults to :class:`SizingOptions`.
 
     Returns:
@@ -149,15 +164,31 @@ def size_engine(
     fuel_data = load_fuel(fuel)
     rho_fuel = fuel_data.density.value
     regression = fuel_data.regression_for(oxidizer)[0]
-    h_design = (
-        design_altitude_m
-        if design_altitude_m is not None
-        else design_altitude_from_apogee(apogee_m)
-    )
+    if design_altitude_m is not None:
+        h_design = design_altitude_m
+    elif apogee_m is not None:
+        h_design = design_altitude_from_apogee(apogee_m)
+    else:
+        h_design = DEFAULT_DESIGN_ALTITUDE_M
+    _log.info("Nozzle design altitude: %.0f m", h_design)
+
+    from hyprop.cea import get_backend
+    from hyprop.oppoints.design_points import OperatingPoint
+
+    thermo = None
+    if opts.nozzle_from_cea or opts.of_design is None:
+        thermo = get_backend(opts.cea_backend, fuel=fuel, oxidizer=oxidizer)
 
     # ---------------- analytic first guess ------------------------------
     mdot_total = thrust_n / (ISP_ESTIMATE_S * G0)
-    of_design = opts.of_design or 0.85 * 8.2  # sub-optimum: O/F drifts
+    if opts.of_design is not None:
+        of_design = opts.of_design
+    else:
+        assert thermo is not None
+        pa_design = atmosphere.pressure(h_design)
+        eps_estimate = optimum_expansion_ratio(opts.pc_design_pa / pa_design, GAMMA_EPS_ESTIMATE)
+        of_design = optimal_of(thermo, opts.pc_design_pa, eps_estimate, pa_design)
+        _log.info("Target O/F_iw = Isp-optimal O/F = %.2f (eps %.2f)", of_design, eps_estimate)
     mdot_ox = mdot_total * of_design / (1.0 + of_design)
     mdot_fuel = mdot_total - mdot_ox
     burn_time = total_impulse_ns / thrust_n
@@ -177,20 +208,14 @@ def size_engine(
         FILL_FRACTION * rho_l + (1 - FILL_FRACTION) * esdu.rho_vapor(temperature_k)
     )
     dp = max(p_tank - opts.pc_design_pa, DP_OVER_PC * opts.pc_design_pa)
-    orifice_area = math.pi * (0.5 * opts.orifice_diameter_m) ** 2
+    orifice_d = opts.orifice_diameter_m  # local: never mutate the caller's options
+    orifice_area = math.pi * (0.5 * orifice_d) ** 2
     n_orifices = max(
         round(mdot_ox / (opts.injector_cd * orifice_area * math.sqrt(2.0 * rho_l * dp))), 1
     )
 
     # placeholder ROP-like point for the very first nozzle sizing
-    from hyprop.cea import get_backend
-    from hyprop.oppoints.design_points import OperatingPoint
-
-    cea = (
-        get_backend(opts.cea_backend, fuel=fuel, oxidizer=oxidizer)
-        if opts.nozzle_from_cea
-        else None
-    )
+    cea = thermo if opts.nozzle_from_cea else None
     nozzle_kw: dict[str, Any] = dict(
         efficiency=opts.nozzle_efficiency, discharge_coefficient=opts.nozzle_cd, cea=cea
     )
@@ -227,7 +252,7 @@ def size_engine(
                     model="spi",
                     discharge_coefficient=opts.injector_cd,
                     orifice_count=int(n_orifices),
-                    orifice_diameter_m=opts.orifice_diameter_m,
+                    orifice_diameter_m=orifice_d,
                 ),
                 nozzle=dict(
                     throat_diameter_m=nozzle.throat_diameter_m,
@@ -247,23 +272,31 @@ def size_engine(
         f_iw = iw["thrust"]
         err_f = f_iw / thrust_n - 1.0
         err_it = it / total_impulse_ns - 1.0
+        err_of = iw["of"] / of_design - 1.0
         _log.info(
-            "Sizing iter %d: F_iw=%.0f N (%+.1f%%), It=%.0f Ns (%+.1f%%)",
+            "Sizing iter %d: F_iw=%.0f N (%+.1f%%), It=%.0f Ns (%+.1f%%), O/F_iw=%.2f (%+.1f%%)",
             iteration,
             f_iw,
             100 * err_f,
             it,
             100 * err_it,
+            iw["of"],
+            100 * err_of,
         )
         achieved = dict(
             thrust_iw_n=f_iw,
             total_impulse_ns=it,
             pc_iw_pa=iw["pc"],
             of_iw=iw["of"],
+            of_target=of_design,
             isp_iw_s=iw["isp"],
             lro_s=result.event_time("liquid_runout") or 0.0,
         )
-        if abs(err_f) < opts.tolerance and abs(err_it) < opts.tolerance:
+        if (
+            abs(err_f) < opts.tolerance
+            and abs(err_it) < opts.tolerance
+            and abs(err_of) < opts.of_tolerance
+        ):
             break
         # --- rescale toward targets ------------------------------------
         # In a blowdown, thrust is governed by the injector (mdot_ox),
@@ -271,8 +304,10 @@ def size_engine(
         # (continuous, via orifice diameter); the throat then re-sizes
         # at the new impulse-weighted point to hold the design Pc.
         factor_f = thrust_n / max(f_iw, 1.0)
-        opts.orifice_diameter_m *= math.sqrt(factor_f)
-        grain_length *= factor_f ** (1.0 - regression.n)  # keep O/F
+        orifice_d *= math.sqrt(factor_f)
+        # mdot_fuel ~ L at fixed port flux and O/F ~ 1/L: the first factor
+        # keeps O/F when mdot_ox scales, the second moves O/F_iw to target.
+        grain_length *= factor_f ** (1.0 - regression.n) * (1.0 + err_of)
         m_ox *= factor_f / (1.0 + err_it)
         tank_volume *= factor_f / (1.0 + err_it)
         # Throat sized at the FIXED design Pc (gamma from the iw point);
@@ -289,7 +324,7 @@ def size_engine(
         warnings.append(
             f"Sizing did not reach {opts.tolerance:.0%} in "
             f"{opts.max_iterations} iterations (last F {err_f:+.1%}, "
-            f"It {err_it:+.1%})."
+            f"It {err_it:+.1%}, O/F {err_of:+.1%})."
         )
 
     # ------------------------- guard reports ----------------------------
