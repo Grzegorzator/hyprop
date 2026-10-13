@@ -180,6 +180,24 @@ class GrainSpec(_Model):
     _v_l = field_validator("length_m", mode="before")(_unit_validator("m"))
     _v_d = field_validator("outer_diameter_m", mode="before")(_unit_validator("m"))
 
+    @field_validator("port", mode="before")
+    @classmethod
+    def _port_units(cls, value: Any) -> Any:
+        """Convert unit strings in port parameters by key suffix.
+
+        Keys ending in ``_m`` are lengths, ``_deg`` angles; other values pass
+        through. Without this, '28 mm' reached the geometry as a string.
+        """
+        if not isinstance(value, dict):
+            return value
+        out = dict(value)
+        for key, item in value.items():
+            if isinstance(item, str) and key.endswith("_m"):
+                out[key] = to_si(item, "m")
+            elif isinstance(item, str) and key.endswith("_deg"):
+                out[key] = to_si(item, "deg")
+        return out
+
     @model_validator(mode="after")
     def _positive(self) -> "GrainSpec":
         if self.length_m <= 0 or self.outer_diameter_m <= 0:
