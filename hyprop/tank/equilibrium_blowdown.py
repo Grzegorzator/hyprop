@@ -124,14 +124,19 @@ class EquilibriumBlowdownTank(TankModel):
     # ----------------------------------------------------------- internal
     def _step_liquid(self, dm: float) -> None:
         if dm >= self._m_liq:
-            # LRO within this step: freeze reference for the gas phase.
+            # LRO within this step: freeze reference for the gas phase and
+            # draw the remainder of this step's outflow from the vapour, so
+            # that tank mass decreases by exactly mdot*dt (mass conservation;
+            # previously the remainder - up to one step of flow - vanished).
             _log.info("Liquid run-out at t=%.3f s", self._time)
+            remainder = dm - self._m_liq
             self._m_liq = 0.0
             self._lro_reference = (
                 self._props.psat(self._temperature),
                 self._temperature,
                 max(self._m_vap, 1e-12),
             )
+            self._m_vap = max(self._m_vap - remainder, 0.0)
             return
         self._m_liq -= dm
         temperature = self._temperature
