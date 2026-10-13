@@ -7,9 +7,13 @@ import sys; sys.path.insert(0, '.')
 import hyprop.simulation.solver as sm
 sm._TABLE_OF, sm._TABLE_PC = 6, 5      # coarser CEA table: sizing speed knob
 import hyprop.api as api
+from hyprop.sizing.preliminary import SizingOptions
 
+# Cantera pinned for reproducibility across machines (RocketCEA needs a
+# Fortran compiler; the two agree to 0.15 %, docs/VALIDATION.md).
 sized = api.size(thrust_n=500.0, total_impulse_ns=4000.0, apogee_m=3000.0,
-                 fuel="hdpe", oxidizer="n2o")
+                 fuel="hdpe", oxidizer="n2o",
+                 options=SizingOptions(cea_backend="cantera"))
 cfg, nz, ach = sized.config, sized.nozzle, sized.achieved
 print(f"Converged in {sized.iterations} iterations; warnings: {sized.warnings or 'none'}")
 print(f"Achieved: F_iw={ach['thrust_iw_n']:.0f} N, It={ach['total_impulse_ns']:.0f} Ns, "

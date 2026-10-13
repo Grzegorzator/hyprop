@@ -33,4 +33,4 @@ nozzle:
   efficiency: 0.9673               # total nozzle eff 0.95 with lambda(15deg)
   discharge_coefficient: 0.98
 efficiencies: {eta_cstar: 0.95}
-simulation: {dt_s: 0.01, t_max_s: 30.0, pc_solver: fixed_point}
+simulation: {dt_s: 0.01, t_max_s: 30.0, pc_solver: fixed_point, cea_backend: cantera}
