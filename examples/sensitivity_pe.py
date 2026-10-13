@@ -22,7 +22,7 @@ table = oat_sensitivity(base, {
     "fuel.regression.a": 1.04e-4,
     "fuel.regression.n": 0.352,
     "injector.discharge_coefficient": 0.60,
-    "efficiencies.eta_cstar": 0.95,
+    "efficiencies.eta_cstar": 0.90,
     "nozzle.throat_diameter_m": base.nozzle.throat_diameter_m,
 }, delta=0.05)
 # NOTE: tank temperature needs an ABSOLUTE perturbation (+-5 K), not

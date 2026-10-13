@@ -62,7 +62,7 @@ class SizingOptions:
     g_ox0: float = 400.0                    # initial port flux [kg/m^2/s]
     injector_cd: float = 0.60
     orifice_diameter_m: float = 1.5e-3
-    eta_cstar: float = 0.95
+    eta_cstar: float = 0.90                 # N2O/HDPE measured 0.87-0.94 (Kamps et al. 2019)
     nozzle_efficiency: float = 0.9673       # with lambda(15deg) -> 0.95 total
     nozzle_cd: float = 0.98                 # throat discharge coefficient
     cea_backend: str = "auto"               # thermochemistry for nozzle + transient

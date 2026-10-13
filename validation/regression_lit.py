@@ -89,9 +89,13 @@ def all_rows() -> List[Row]:
                     pe.n, status=INFO,
                     comment="Preset (0.352) bliski Doranowi; Kamps: 0.62 (endpoint) / 0.76 (history). "
                             "Rozrzut n to główna niepewność sizingu – zmierzyć w kilku punktach G_ox."))
-    rows.append(Row("η_c* domyślne vs zmierzone dla N2O/HDPE", "SizingOptions.eta_cstar = 0.95", 0.94,
-                    KAMPS.split(", Sec.")[0] + ", Conclusions: ustalone η* 87–94 %", 0.95, status=INFO,
-                    comment="Domyślne 0.95 jest powyżej górnej granicy zmierzonej przez Kampsa (87–94 %)."))
+    from hyprop.sizing.preliminary import SizingOptions
+    eta = SizingOptions().eta_cstar
+    rows.append(Row("η_c* domyślne (sizing) w zakresie zmierzonym dla N2O/HDPE", "SizingOptions.eta_cstar",
+                    0.94, KAMPS.split(", Sec.")[0] + ", Conclusions: ustalone η* 87–94 %", eta,
+                    status="PASS" if 0.87 <= eta <= 0.94 else "FAIL", dev_kind="abs",
+                    comment="Kryterium: wartość w przedziale 0.87–0.94 (kolumna Referencja = górna granica). "
+                            "Do v0.2 domyślne było 0.95."))
     rows.append(Row("ṙ preset vs HDPE/LOX (Waxman) przy G = 100", "inny utleniacz – tylko skala",
                     2.340e-2 * 100.0 ** 0.62, WAXMAN_T11, pe.a * 100.0 ** pe.n * 1e3, unit="mm/s", status=INFO))
     par = load_fuel("paraffin").regression_for("n2o")[0]

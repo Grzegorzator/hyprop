@@ -21,28 +21,28 @@ fuel:
   overrides: {}
 grain:
   geometry: cylindrical
-  length_m: 0.5629893624062867
+  length_m: 0.5829856971529556
   outer_diameter_m: 0.04313636125423799
   port:
-    initial_diameter_m: 0.02758533915614524
+    initial_diameter_m: 0.027888967666645458
 tank:
   model: equilibrium_blowdown
-  volume_m3: 0.0025092580248335223
-  oxidizer_mass_kg: 1.737115348861185
+  volume_m3: 0.002651197834657481
+  oxidizer_mass_kg: 1.8353777913120743
   parameters: {}
 injector:
   model: spi
   discharge_coefficient: 0.6
   orifice_count: 4
-  orifice_diameter_m: 0.0017154873122091434
+  orifice_diameter_m: 0.001762313933823555
 nozzle:
-  throat_diameter_m: 0.012000373081652898
-  expansion_ratio: 5.001586669366831
+  throat_diameter_m: 0.012000884252910064
+  expansion_ratio: 4.998644958207211
   divergence_half_angle_deg: 15.0
   efficiency: 0.9673
   discharge_coefficient: 0.98
 efficiencies:
-  eta_cstar: 0.95
+  eta_cstar: 0.9
 simulation:
   dt_s: 0.02
   t_max_s: 60.0

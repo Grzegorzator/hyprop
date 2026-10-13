@@ -272,7 +272,9 @@ class EfficiencySpec(_Model):
     """Empirical efficiency factors (to be confirmed by fire tests)."""
 
     eta_cstar: float = Field(
-        0.90, gt=0, le=1.0, description="Combustion efficiency eta_c* [-]"
+        0.90, gt=0, le=1.0,
+        description="Combustion efficiency eta_c* [-]; default 0.90 within the "
+        "0.87-0.94 measured for N2O/HDPE by Kamps et al., Aerospace 6, 45 (2019)",
     )
 
 
