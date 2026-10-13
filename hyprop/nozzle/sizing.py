@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from scipy.optimize import brentq
 
@@ -54,9 +54,9 @@ class NozzleDesign:
     design_altitude_m: float
     design_ambient_pa: float
     exit_pressure_pa: float
-    cf_design: float                 #: Cf at design point (with divergence)
-    cf_sea_level: float              #: Cf at lift-off (overexpansion check)
-    separation_risk: bool            #: pe < 0.4*pa at sea level (Summerfield)
+    cf_design: float  #: Cf at design point (with divergence)
+    cf_sea_level: float  #: Cf at lift-off (overexpansion check)
+    separation_risk: bool  #: pe < 0.4*pa at sea level (Summerfield)
 
 
 def design_altitude_from_apogee(apogee_m: float) -> float:
@@ -71,7 +71,7 @@ def size_nozzle(
     half_angle_deg: float = 15.0,
     efficiency: float = 1.0,
     discharge_coefficient: float = 1.0,
-    cea: Optional["ThermochemistryBackend"] = None,
+    cea: ThermochemistryBackend | None = None,
 ) -> NozzleDesign:
     """Size throat and expansion for a target thrust at the ROP point.
 
@@ -103,7 +103,7 @@ def size_nozzle(
     lam = divergence_efficiency(half_angle_deg)
     use_cea = cea is not None and "of" in point.values
 
-    if use_cea:
+    if use_cea and cea is not None:
         of = point["of"]
 
         def pe_of(eps_try: float) -> float:
@@ -115,9 +115,10 @@ def size_nozzle(
 
         def cf_ideal(pa: float) -> float:
             c_i = ideal_effective_exhaust_velocity(
-                r.equilibrium.exhaust_velocity_m_s, pe, pa, eps,
-                r.cstar_m_s, pc, lam)
+                r.equilibrium.exhaust_velocity_m_s, pe, pa, eps, r.cstar_m_s, pc, lam
+            )
             return c_i / r.cstar_m_s
+
         cf_i_design, cf_i_sl = cf_ideal(pa_design), cf_ideal(pa_sl)
     else:
         gamma = point["gamma"]
@@ -128,6 +129,7 @@ def size_nozzle(
 
         def cf_ideal(pa: float) -> float:
             return lam * cf_momentum + (pe_over_pc - pa / pc) * eps
+
         cf_i_design, cf_i_sl = cf_ideal(pa_design), cf_ideal(pa_sl)
 
     # lambda is already inside cf_i (momentum term only, Sutton Eq. 3-34)
@@ -136,19 +138,29 @@ def size_nozzle(
     throat_area = thrust_target_n / (cf_design * discharge_coefficient * pc)
     throat_d = 2.0 * math.sqrt(throat_area / math.pi)
     exit_d = throat_d * math.sqrt(eps)
-    separation = pe < 0.4 * pa_sl        # Summerfield criterion
+    separation = pe < 0.4 * pa_sl  # Summerfield criterion
 
     _log.info(
         "Nozzle (%s): Dt=%.2f mm, eps=%.3f, De=%.1f mm, pe=%.0f Pa "
         "(h_d=%.0f m), Cf=%.3f (SL %.3f)%s",
-        "CEA" if use_cea else "ideal gas", throat_d * 1e3, eps,
-        exit_d * 1e3, pe, design_altitude_m, cf_design, cf_sl,
+        "CEA" if use_cea else "ideal gas",
+        throat_d * 1e3,
+        eps,
+        exit_d * 1e3,
+        pe,
+        design_altitude_m,
+        cf_design,
+        cf_sl,
         " SEPARATION RISK" if separation else "",
     )
     return NozzleDesign(
-        throat_diameter_m=throat_d, exit_diameter_m=exit_d,
-        expansion_ratio=eps, design_altitude_m=design_altitude_m,
-        design_ambient_pa=pa_design, exit_pressure_pa=pe,
-        cf_design=cf_design, cf_sea_level=cf_sl,
+        throat_diameter_m=throat_d,
+        exit_diameter_m=exit_d,
+        expansion_ratio=eps,
+        design_altitude_m=design_altitude_m,
+        design_ambient_pa=pa_design,
+        exit_pressure_pa=pe,
+        cf_design=cf_design,
+        cf_sea_level=cf_sl,
         separation_risk=separation,
     )

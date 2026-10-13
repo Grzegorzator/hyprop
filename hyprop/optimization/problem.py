@@ -13,10 +13,8 @@ Custom metrics: pass a callable(row_dict) -> float.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Sequence, Tuple, Union
-
-import numpy as np
 
 from hyprop.batch.runner import run_case
 from hyprop.core.config import EngineConfig
@@ -24,7 +22,7 @@ from hyprop.core.logging import get_logger
 
 _log = get_logger(__name__)
 
-Metric = Union[str, Callable[[Dict[str, float]], float]]
+Metric = str | Callable[[dict[str, float]], float]
 
 
 @dataclass
@@ -34,9 +32,9 @@ class Objective:
     metric: Metric
     direction: str = "max"
 
-    def value(self, row: Dict[str, float]) -> float:
+    def value(self, row: dict[str, float]) -> float:
         raw = self.metric(row) if callable(self.metric) else row[self.metric]
-        return -raw if self.direction == "max" else raw   # minimise always
+        return -raw if self.direction == "max" else raw  # minimise always
 
 
 @dataclass
@@ -44,26 +42,25 @@ class OptimizationProblem:
     """Decision variables, objectives and inequality constraints g<=0."""
 
     base_config: EngineConfig
-    variables: Dict[str, Tuple[float, float]]           # path -> (lo, hi)
-    objectives: List[Objective]
-    constraints: List[Callable[[Dict[str, float]], float]] = field(
-        default_factory=list)
+    variables: dict[str, tuple[float, float]]  # path -> (lo, hi)
+    objectives: list[Objective]
+    constraints: list[Callable[[dict[str, float]], float]] = field(default_factory=list)
     penalty: float = 1e9
 
     @property
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         return list(self.variables)
 
     @property
-    def bounds(self) -> List[Tuple[float, float]]:
+    def bounds(self) -> list[tuple[float, float]]:
         return [self.variables[n] for n in self.names]
 
-    def evaluate(self, x: Sequence[float]) -> Tuple[List[float], Dict]:
+    def evaluate(self, x: Sequence[float]) -> tuple[list[float], dict]:
         """Return (objective values [min-form], result row)."""
-        case = dict(zip(self.names, (float(v) for v in x)))
+        case = dict(zip(self.names, (float(v) for v in x), strict=False))
         try:
             row = run_case(self.base_config, case)
-        except Exception as exc:                        # infeasible design
+        except Exception as exc:  # infeasible design
             _log.debug("Infeasible x=%s (%s)", case, exc)
             return [self.penalty] * len(self.objectives), {}
         values = [obj.value(row) for obj in self.objectives]

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging as _logging
 from pathlib import Path
-from typing import Optional, Union
 
 _ROOT_NAME = "hyprop"
 _FORMAT = "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s"
@@ -24,9 +23,9 @@ def get_logger(name: str) -> _logging.Logger:
 
 
 def configure(
-    level: Union[int, str] = "INFO",
-    logfile: Optional[Union[str, Path]] = None,
-    file_level: Union[int, str] = "DEBUG",
+    level: int | str = "INFO",
+    logfile: str | Path | None = None,
+    file_level: int | str = "DEBUG",
 ) -> _logging.Logger:
     """Configure the ``hyprop`` root logger.
 

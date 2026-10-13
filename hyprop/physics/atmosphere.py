@@ -13,11 +13,11 @@ import math
 
 from hyprop.core.constants import G0, P_ATM_SL, R_UNIVERSAL, T_ATM_SL
 
-M_AIR = 0.0289644          # [kg/mol] mean molar mass of dry air (ISO 2533)
-LAPSE_RATE = 0.0065        # [K/m] tropospheric lapse rate
-H_TROPOPAUSE = 11_000.0    # [m]
-T_TROPOPAUSE = T_ATM_SL - LAPSE_RATE * H_TROPOPAUSE          # 216.65 K
-_EXPONENT = G0 * M_AIR / (R_UNIVERSAL * LAPSE_RATE)          # ~5.2559
+M_AIR = 0.0289644  # [kg/mol] mean molar mass of dry air (ISO 2533)
+LAPSE_RATE = 0.0065  # [K/m] tropospheric lapse rate
+H_TROPOPAUSE = 11_000.0  # [m]
+T_TROPOPAUSE = T_ATM_SL - LAPSE_RATE * H_TROPOPAUSE  # 216.65 K
+_EXPONENT = G0 * M_AIR / (R_UNIVERSAL * LAPSE_RATE)  # ~5.2559
 P_TROPOPAUSE = P_ATM_SL * (T_TROPOPAUSE / T_ATM_SL) ** _EXPONENT
 
 
@@ -35,16 +35,13 @@ def pressure(altitude_m: float) -> float:
     if altitude_m <= H_TROPOPAUSE:
         return P_ATM_SL * (temperature(altitude_m) / T_ATM_SL) ** _EXPONENT
     return P_TROPOPAUSE * math.exp(
-        -G0 * M_AIR * (altitude_m - H_TROPOPAUSE)
-        / (R_UNIVERSAL * T_TROPOPAUSE)
+        -G0 * M_AIR * (altitude_m - H_TROPOPAUSE) / (R_UNIVERSAL * T_TROPOPAUSE)
     )
 
 
 def density(altitude_m: float) -> float:
     """ISA density [kg/m^3] from the ideal-gas law."""
-    return pressure(altitude_m) * M_AIR / (
-        R_UNIVERSAL * temperature(altitude_m)
-    )
+    return pressure(altitude_m) * M_AIR / (R_UNIVERSAL * temperature(altitude_m))
 
 
 def _check(altitude_m: float) -> None:

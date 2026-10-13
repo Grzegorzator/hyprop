@@ -67,6 +67,5 @@ def test_port_parameters_accept_unit_strings():
     """Regression: '28 mm' in grain.port reached the geometry as a string."""
     from hyprop.core.config import GrainSpec
 
-    g = GrainSpec(length_m="450 mm", outer_diameter_m="5 cm",
-                  port={"initial_diameter_m": "28 mm"})
+    g = GrainSpec(length_m="450 mm", outer_diameter_m="5 cm", port={"initial_diameter_m": "28 mm"})
     assert g.port["initial_diameter_m"] == pytest.approx(0.028)

@@ -5,9 +5,9 @@ import math
 import pytest
 
 import hyprop.simulation.solver as solver_module
+from hyprop.nozzle.sizing import design_altitude_from_apogee, size_nozzle
 from hyprop.oppoints.design_points import OperatingPoint
 from hyprop.physics import atmosphere
-from hyprop.nozzle.sizing import design_altitude_from_apogee, size_nozzle
 
 
 def test_isa_reference_values():
@@ -22,8 +22,7 @@ def test_isa_reference_values():
 
 def test_nozzle_sizing_roundtrip():
     point = OperatingPoint("iw", {"pc": 31.3e5, "gamma": 1.25})
-    design = size_nozzle(point, thrust_target_n=500.0,
-                         design_altitude_m=1000.0)
+    design = size_nozzle(point, thrust_target_n=500.0, design_altitude_m=1000.0)
     # exit pressure adapted to 1000 m ISA:
     assert design.exit_pressure_pa == pytest.approx(89876.0, rel=1e-3)
     # thrust recovered: F = Cf * pc * At
@@ -43,25 +42,34 @@ class _StubCEA:
 
     def query(self, of, pc, eps):
         from hyprop.cea.backend import CEAResult, ExpansionResult, StationState
+
         chamber = StationState(3300.0, pc, 1.25, 0.0265, 1900.0)
         throat = StationState(3100.0, 0.55 * pc, 1.25, 0.0265)
         exit_s = StationState(1800.0, 0.5e5, 1.28, 0.0265)
-        return CEAResult(of=of, pc_pa=pc, eps=eps, chamber=chamber,
-                         throat=throat,
-                         equilibrium=ExpansionResult(exit_s, 2150.0),
-                         frozen=ExpansionResult(exit_s, 2100.0),
-                         cstar_m_s=1550.0, backend="stub")
+        return CEAResult(
+            of=of,
+            pc_pa=pc,
+            eps=eps,
+            chamber=chamber,
+            throat=throat,
+            equilibrium=ExpansionResult(exit_s, 2150.0),
+            frozen=ExpansionResult(exit_s, 2100.0),
+            cstar_m_s=1550.0,
+            backend="stub",
+        )
 
 
 def test_inverse_sizing_converges(monkeypatch):
-    monkeypatch.setattr(solver_module, "_build_cea_table",
-                        lambda config, eps: _StubCEA())
+    monkeypatch.setattr(solver_module, "_build_cea_table", lambda config, eps: _StubCEA())
     from hyprop.sizing import size_engine
     from hyprop.sizing.preliminary import SizingOptions
 
-    sized = size_engine(thrust_n=500.0, total_impulse_ns=4000.0,
-                        apogee_m=3000.0,
-                        options=SizingOptions(nozzle_from_cea=False))
+    sized = size_engine(
+        thrust_n=500.0,
+        total_impulse_ns=4000.0,
+        apogee_m=3000.0,
+        options=SizingOptions(nozzle_from_cea=False),
+    )
     achieved = sized.achieved
     assert achieved["thrust_iw_n"] == pytest.approx(500.0, rel=0.05)
     assert achieved["total_impulse_ns"] == pytest.approx(4000.0, rel=0.05)

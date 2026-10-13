@@ -8,7 +8,6 @@ next to them (single self-documenting result folder).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
 
 from hyprop.core.config import EngineConfig
 from hyprop.core.logging import get_logger
@@ -19,9 +18,9 @@ _log = get_logger(__name__)
 
 def export_result(
     result,
-    directory: Union[str, Path],
-    config: Optional[EngineConfig] = None,
-    rop: Optional[ROPReport] = None,
+    directory: str | Path,
+    config: EngineConfig | None = None,
+    rop: ROPReport | None = None,
     formats: tuple = ("csv", "xlsx", "json"),
     stem: str = "run",
 ) -> list:
@@ -52,10 +51,8 @@ def export_result(
             with pd.ExcelWriter(path) as writer:
                 history.to_excel(writer, sheet_name="history", index=False)
                 if rop is not None:
-                    rop.comparison_table().to_excel(
-                        writer, sheet_name="rop_points")
-                    rop.phases_table().to_excel(
-                        writer, sheet_name="phases", index=False)
+                    rop.comparison_table().to_excel(writer, sheet_name="rop_points")
+                    rop.phases_table().to_excel(writer, sheet_name="phases", index=False)
             written.append(path)
     if rop is not None and "csv" in formats:
         path = directory / f"{stem}_rop_points.csv"

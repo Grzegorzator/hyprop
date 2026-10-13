@@ -246,12 +246,15 @@ def run(config: EngineConfig) -> SimulationResult: ...
 def run_batch(cases: CaseMatrix, n_jobs: int = -1) -> pd.DataFrame: ...
 def size(mission: MissionRequirements) -> EngineConfig: ...
 
+
 class ThermochemistryBackend(ABC):
     def query(self, of: float, pc: float, eps: float) -> CEAResult: ...
 
-@register_model("regression")          # rejestr pluginów (core/registry.py)
+
+@register_model("regression")  # rejestr pluginów (core/registry.py)
 class PowerLawRegression(RegressionModel):
-    def rdot(self, g_flux: float, state: PortState) -> float: ...   # [m/s]
+    def rdot(self, g_flux: float, state: PortState) -> float: ...  # [m/s]
+
 
 class GrainGeometry(ABC):
     # w = grubość spalona [m]; wszystko jako funkcja w → dowolny kształt portu
@@ -261,8 +264,10 @@ class GrainGeometry(ABC):
     def fuel_volume(self, w) -> float: ...
     def web_remaining(self, w) -> float: ...
 
+
 class TankModel(ABC):
     def step(self, dt: float, mdot_out: float) -> TankState: ...
+
 
 class InjectorModel(ABC):
     def mdot(self, upstream: FluidState, p_chamber: float) -> float: ...

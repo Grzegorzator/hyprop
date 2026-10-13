@@ -8,5 +8,4 @@ from hyprop.database.store import (
     save_record,
 )
 
-__all__ = ["save_engine", "load_engine", "save_record", "load_record",
-           "list_records"]
+__all__ = ["save_engine", "load_engine", "save_record", "load_record", "list_records"]

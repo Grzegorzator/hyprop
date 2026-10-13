@@ -32,9 +32,7 @@ class CylindricalGrain(GrainGeometry):
     ) -> None:
         super().__init__(length_m, outer_diameter_m)
         if not (0.0 < initial_diameter_m < outer_diameter_m):
-            raise ConfigError(
-                "Port initial diameter must be in (0, outer diameter)."
-            )
+            raise ConfigError("Port initial diameter must be in (0, outer diameter).")
         self.initial_diameter_m = initial_diameter_m
 
     def _radius(self, w: float) -> float:

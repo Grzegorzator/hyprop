@@ -77,7 +77,10 @@ class ConstantMdotTank(PressureFedTank):
         density_kg_m3: float = 786.6,
     ) -> None:
         super().__init__(
-            oxidizer_mass_kg, pressure_pa, temperature_k, density_kg_m3,
+            oxidizer_mass_kg,
+            pressure_pa,
+            temperature_k,
+            density_kg_m3,
             vapor_pressure_pa=pressure_pa,
         )
         if mdot_kg_s <= 0:

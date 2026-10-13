@@ -10,9 +10,7 @@ from tests.test_solver import CFG, _StubCEA
 
 @pytest.fixture()
 def stub_cea(monkeypatch):
-    monkeypatch.setattr(
-        solver_module, "_build_cea_table", lambda config, eps: _StubCEA()
-    )
+    monkeypatch.setattr(solver_module, "_build_cea_table", lambda config, eps: _StubCEA())
 
 
 def _problem():
@@ -20,14 +18,14 @@ def _problem():
         base_config=EngineConfig.from_dict(CFG),
         variables={"nozzle.throat_diameter_m": (9e-3, 14e-3)},
         objectives=[Objective("thrust_iw", "max")],
-        constraints=[lambda row: row["peak_pc_pa"] - 45e5],   # Pc <= 45 bar
+        constraints=[lambda row: row["peak_pc_pa"] - 45e5],  # Pc <= 45 bar
     )
 
 
 def test_evaluate_and_penalty(stub_cea):
     problem = _problem()
     values, row = problem.evaluate([11.5e-3])
-    assert row["thrust_iw"] > 0 and values[0] < 0        # max -> negated
+    assert row["thrust_iw"] > 0 and values[0] < 0  # max -> negated
     # infeasible variable (tiny throat -> huge Pc) triggers the constraint
     values_bad, _ = problem.evaluate([9e-3])
     assert values_bad[0] > values[0]

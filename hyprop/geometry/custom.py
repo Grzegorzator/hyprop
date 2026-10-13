@@ -22,25 +22,25 @@ HRAP assumes analogous perpendicular regression for its shapes.
 from __future__ import annotations
 
 import math
-from typing import List, Sequence, Tuple
+from collections.abc import Sequence
 
 from hyprop.core.exceptions import ConfigError
 from hyprop.core.registry import register_model
 from hyprop.geometry.base import GrainGeometry
 
-_BUFFER_RESOLUTION = 64          # segments per quarter circle in offsets
-_BORE_TOLERANCE = 1e-9           # geometric tolerance [m]
+_BUFFER_RESOLUTION = 64  # segments per quarter circle in offsets
+_BORE_TOLERANCE = 1e-9  # geometric tolerance [m]
 
 
 def _require_shapely():
     try:
         import shapely  # noqa: F401
         from shapely.geometry import Point, Polygon
+
         return Point, Polygon
-    except ImportError as exc:                       # pragma: no cover
+    except ImportError as exc:  # pragma: no cover
         raise ConfigError(
-            "Contour-based geometries require shapely "
-            "(pip install shapely)."
+            "Contour-based geometries require shapely (pip install shapely)."
         ) from exc
 
 
@@ -52,7 +52,7 @@ class ContourGrain(GrainGeometry):
         self,
         length_m: float,
         outer_diameter_m: float,
-        contour_points_m: Sequence[Tuple[float, float]],
+        contour_points_m: Sequence[tuple[float, float]],
     ) -> None:
         super().__init__(length_m, outer_diameter_m)
         Point, Polygon = _require_shapely()
@@ -62,9 +62,7 @@ class ContourGrain(GrainGeometry):
         if not self._port0.is_valid or self._port0.area <= 0.0:
             raise ConfigError("Contour polygon is invalid or degenerate.")
         bore_radius = 0.5 * outer_diameter_m
-        self._bore = Point(0.0, 0.0).buffer(
-            bore_radius, quad_segs=_BUFFER_RESOLUTION
-        )
+        self._bore = Point(0.0, 0.0).buffer(bore_radius, quad_segs=_BUFFER_RESOLUTION)
         if not self._bore.contains(self._port0):
             raise ConfigError("Initial contour must lie inside the bore.")
         self._bore_radius = bore_radius
@@ -102,16 +100,14 @@ class ContourGrain(GrainGeometry):
 
 def _max_radius(polygon) -> float:
     """Largest distance of a polygon boundary vertex from the origin."""
-    return max(
-        math.hypot(x, y) for x, y in polygon.exterior.coords
-    )
+    return max(math.hypot(x, y) for x, y in polygon.exterior.coords)
 
 
 def star_contour(
     point_count: int,
     inner_radius_m: float,
     outer_radius_m: float,
-) -> List[Tuple[float, float]]:
+) -> list[tuple[float, float]]:
     """Classic star port: alternating inner/outer vertices.
 
     ``outer_radius_m`` is the star tip radius (into the fuel),
@@ -121,7 +117,7 @@ def star_contour(
         raise ConfigError("Star needs at least 3 points.")
     if not (0.0 < inner_radius_m < outer_radius_m):
         raise ConfigError("Require 0 < inner_radius < outer_radius.")
-    points: List[Tuple[float, float]] = []
+    points: list[tuple[float, float]] = []
     step = math.pi / point_count
     for k in range(2 * point_count):
         radius = outer_radius_m if k % 2 == 0 else inner_radius_m
@@ -135,7 +131,7 @@ def wagon_wheel_contour(
     hub_radius_m: float,
     tip_radius_m: float,
     spoke_width_m: float,
-) -> List[Tuple[float, float]]:
+) -> list[tuple[float, float]]:
     """Wagon-wheel port: central hub with radial slots (spokes of gas).
 
     Approximated as a polygon: circular hub of ``hub_radius_m`` with
@@ -150,7 +146,7 @@ def wagon_wheel_contour(
         raise ConfigError("Spoke width must be in (0, hub diameter).")
 
     half_width = 0.5 * spoke_width_m
-    points: List[Tuple[float, float]] = []
+    points: list[tuple[float, float]] = []
     sector = 2.0 * math.pi / spoke_count
     # Angular half-width of the slot where it meets the hub:
     alpha = math.asin(half_width / hub_radius_m)
@@ -172,11 +168,11 @@ def wagon_wheel_contour(
     return points
 
 
-def _rot(angle: float, radius: float) -> Tuple[float, float]:
+def _rot(angle: float, radius: float) -> tuple[float, float]:
     return (radius * math.cos(angle), radius * math.sin(angle))
 
 
-def _rot_xy(angle: float, x: float, y: float) -> Tuple[float, float]:
+def _rot_xy(angle: float, x: float, y: float) -> tuple[float, float]:
     """Rotate point (x, y) by ``angle`` around origin."""
     c, s = math.cos(angle), math.sin(angle)
     return (c * x - s * y, s * x + c * y)
@@ -217,7 +213,5 @@ class WagonWheelGrain(ContourGrain):
         super().__init__(
             length_m,
             outer_diameter_m,
-            wagon_wheel_contour(
-                spoke_count, hub_radius_m, tip_radius_m, spoke_width_m
-            ),
+            wagon_wheel_contour(spoke_count, hub_radius_m, tip_radius_m, spoke_width_m),
         )

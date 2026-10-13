@@ -17,20 +17,20 @@ Example
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Any
 
 import pint
 
 from hyprop.core.exceptions import UnitError
 
 #: Shared unit registry (singleton for the whole application).
-ureg = pint.UnitRegistry()
+ureg: pint.UnitRegistry = pint.UnitRegistry()
 
 #: Shorthand quantity constructor bound to the shared registry.
 Q_ = ureg.Quantity
 
-Numeric = Union[int, float]
-QuantityLike = Union[Numeric, str, pint.Quantity]
+Numeric = int | float
+QuantityLike = Numeric | str | pint.Quantity
 
 
 def to_si(value: QuantityLike, target_unit: str) -> float:
@@ -58,7 +58,7 @@ def to_si(value: QuantityLike, target_unit: str) -> float:
         return float(value)
 
     try:
-        quantity = Q_(value) if isinstance(value, str) else value
+        quantity: Any = Q_(value) if isinstance(value, str) else value
         return float(quantity.to(target_unit).magnitude)
     except pint.errors.DimensionalityError as exc:
         raise UnitError(

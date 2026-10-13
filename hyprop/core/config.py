@@ -15,7 +15,7 @@ so that units are unambiguous at every call site.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional, Union
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -26,13 +26,16 @@ from hyprop.core.units import to_si
 #: Current schema version of EngineConfig files.
 CONFIG_VERSION = "0.1"
 
-QuantityField = Union[float, str]
+#: Physical quantity field. Input may be a float in SI or a unit string
+#: ("40 bar"); every such field has a ``mode="before"`` validator that
+#: converts to SI, so after validation the attribute is always a float.
+QuantityField = float
 
 
 def _unit_validator(unit: str):
     """Build a pydantic validator converting str/float input to SI float."""
 
-    def _validate(value: Any) -> Optional[float]:
+    def _validate(value: Any) -> float | None:
         if value is None:
             return None
         return to_si(value, unit)
@@ -50,31 +53,27 @@ class MissionRequirements(_Model):
     """Top-level mission requirements driving the sizing process."""
 
     thrust_n: QuantityField = Field(..., description="Required (nominal) thrust [N]")
-    total_impulse_ns: Optional[QuantityField] = Field(
-        None, description="Required total impulse [N*s]"
-    )
-    burn_time_s: Optional[QuantityField] = Field(
-        None, description="Required burn time [s]"
-    )
+    total_impulse_ns: QuantityField | None = Field(None, description="Required total impulse [N*s]")
+    burn_time_s: QuantityField | None = Field(None, description="Required burn time [s]")
     design_altitude_m: QuantityField = Field(
-        0.0, description="Nozzle adaptation altitude [m] (NOT the apogee; "
-        "for an ascent the optimum is a fraction of the apogee)"
+        0.0,
+        description="Nozzle adaptation altitude [m] (NOT the apogee; "
+        "for an ascent the optimum is a fraction of the apogee)",
     )
-    apogee_m: Optional[QuantityField] = Field(
-        None, description="Mission apogee target [m] (informational; used "
-        "by sizing to pick the adaptation altitude)"
+    apogee_m: QuantityField | None = Field(
+        None,
+        description="Mission apogee target [m] (informational; used "
+        "by sizing to pick the adaptation altitude)",
     )
-    ambient_pressure_pa: Optional[QuantityField] = Field(
+    ambient_pressure_pa: QuantityField | None = Field(
         None,
         description="Ambient pressure at design point [Pa]; if omitted it "
         "will be derived from design_altitude_m (ISA) in the sizing module.",
     )
-    min_isp_s: Optional[QuantityField] = Field(
+    min_isp_s: QuantityField | None = Field(
         None, description="Minimum acceptable (delivered) specific impulse [s]"
     )
-    safety_factor: float = Field(
-        1.5, ge=1.0, description="Structural safety factor [-]"
-    )
+    safety_factor: float = Field(1.5, ge=1.0, description="Structural safety factor [-]")
 
     _v_f = field_validator("thrust_n", mode="before")(_unit_validator("N"))
     _v_it = field_validator("total_impulse_ns", mode="before")(_unit_validator("N*s"))
@@ -85,11 +84,9 @@ class MissionRequirements(_Model):
     _v_isp = field_validator("min_isp_s", mode="before")(_unit_validator("s"))
 
     @model_validator(mode="after")
-    def _require_impulse_or_time(self) -> "MissionRequirements":
+    def _require_impulse_or_time(self) -> MissionRequirements:
         if self.total_impulse_ns is None and self.burn_time_s is None:
-            raise ValueError(
-                "Provide total_impulse_ns or burn_time_s (or both)."
-            )
+            raise ValueError("Provide total_impulse_ns or burn_time_s (or both).")
         return self
 
 
@@ -97,15 +94,13 @@ class OxidizerSpec(_Model):
     """Oxidizer selection and tank thermodynamic state."""
 
     name: str = Field(..., description="Database name (n2o, lox, gox, htp) or 'custom'")
-    temperature_k: QuantityField = Field(
-        293.15, description="Initial tank (fluid) temperature [K]"
-    )
-    tank_pressure_pa: Optional[QuantityField] = Field(
+    temperature_k: QuantityField = Field(293.15, description="Initial tank (fluid) temperature [K]")
+    tank_pressure_pa: QuantityField | None = Field(
         None,
         description="Initial tank pressure [Pa]; for self-pressurising N2O "
         "leave empty (saturation pressure at temperature_k is used).",
     )
-    overrides: Dict[str, Any] = Field(
+    overrides: dict[str, Any] = Field(
         default_factory=dict,
         description="Property overrides / definition of a custom oxidizer "
         "(same schema as data/oxidizers YAML).",
@@ -122,10 +117,8 @@ class RegressionSpec(_Model):
     """
 
     model: str = Field("power_law", description="Registered regression model name")
-    a: Optional[float] = Field(
-        None, gt=0, description="Coefficient a [m/s / (kg/m^2/s)^n / m^m]"
-    )
-    n: Optional[float] = Field(None, gt=0, description="Flux exponent n [-]")
+    a: float | None = Field(None, gt=0, description="Coefficient a [m/s / (kg/m^2/s)^n / m^m]")
+    n: float | None = Field(None, gt=0, description="Flux exponent n [-]")
     m: float = Field(0.0, description="Grain-length exponent m [-]")
     flux_basis: Literal["oxidizer", "total"] = Field(
         "oxidizer",
@@ -140,22 +133,20 @@ class FuelSpec(_Model):
     name: str = Field(
         ..., description="Database name (ldpe, hdpe, paraffin, htpb, abs, pmma) or 'custom'"
     )
-    density_kg_m3: Optional[QuantityField] = Field(
+    density_kg_m3: QuantityField | None = Field(
         None, description="Override of fuel density [kg/m^3]"
     )
-    regression: Optional[RegressionSpec] = Field(
+    regression: RegressionSpec | None = Field(
         None,
         description="Override of regression law; default comes from database.",
     )
-    overrides: Dict[str, Any] = Field(
+    overrides: dict[str, Any] = Field(
         default_factory=dict,
         description="Other property overrides / custom fuel definition "
         "(same schema as data/fuels YAML).",
     )
 
-    _v_rho = field_validator("density_kg_m3", mode="before")(
-        _unit_validator("kg/m^3")
-    )
+    _v_rho = field_validator("density_kg_m3", mode="before")(_unit_validator("kg/m^3"))
 
 
 class GrainSpec(_Model):
@@ -168,12 +159,11 @@ class GrainSpec(_Model):
 
     geometry: str = Field(
         "cylindrical",
-        description="Registered geometry name "
-        "(cylindrical, multiport, wagon_wheel, star, custom)",
+        description="Registered geometry name (cylindrical, multiport, wagon_wheel, star, custom)",
     )
     length_m: QuantityField = Field(..., description="Grain length [m]")
     outer_diameter_m: QuantityField = Field(..., description="Grain OD [m]")
-    port: Dict[str, Any] = Field(
+    port: dict[str, Any] = Field(
         default_factory=dict, description="Geometry-specific port parameters"
     )
 
@@ -199,7 +189,7 @@ class GrainSpec(_Model):
         return out
 
     @model_validator(mode="after")
-    def _positive(self) -> "GrainSpec":
+    def _positive(self) -> GrainSpec:
         if self.length_m <= 0 or self.outer_diameter_m <= 0:
             raise ValueError("Grain dimensions must be positive.")
         return self
@@ -210,14 +200,11 @@ class TankSpec(_Model):
 
     model: str = Field(
         "equilibrium_blowdown",
-        description="Registered tank model "
-        "(equilibrium_blowdown, pressure_fed, constant_mdot)",
+        description="Registered tank model (equilibrium_blowdown, pressure_fed, constant_mdot)",
     )
-    volume_m3: Optional[QuantityField] = Field(None, description="Tank volume [m^3]")
-    oxidizer_mass_kg: Optional[QuantityField] = Field(
-        None, description="Initial oxidizer load [kg]"
-    )
-    parameters: Dict[str, Any] = Field(
+    volume_m3: QuantityField | None = Field(None, description="Tank volume [m^3]")
+    oxidizer_mass_kg: QuantityField | None = Field(None, description="Initial oxidizer load [kg]")
+    parameters: dict[str, Any] = Field(
         default_factory=dict, description="Model-specific parameters"
     )
 
@@ -228,14 +215,12 @@ class TankSpec(_Model):
 class InjectorSpec(_Model):
     """Injector model and geometry."""
 
-    model: str = Field(
-        "spi", description="Registered injector model (spi, nhne, hem)"
-    )
+    model: str = Field("spi", description="Registered injector model (spi, nhne, hem)")
     discharge_coefficient: float = Field(
         0.66, gt=0, le=1.0, description="Discharge coefficient Cd [-]"
     )
     orifice_count: int = Field(1, ge=1, description="Number of orifices [-]")
-    orifice_diameter_m: Optional[QuantityField] = Field(
+    orifice_diameter_m: QuantityField | None = Field(
         None, description="Single orifice diameter [m]"
     )
 
@@ -245,22 +230,24 @@ class InjectorSpec(_Model):
 class NozzleSpec(_Model):
     """Nozzle geometry; empty fields are computed by nozzle sizing (E8)."""
 
-    throat_diameter_m: Optional[QuantityField] = Field(
-        None, description="Throat diameter [m]"
-    )
-    expansion_ratio: Optional[float] = Field(
+    throat_diameter_m: QuantityField | None = Field(None, description="Throat diameter [m]")
+    expansion_ratio: float | None = Field(
         None, gt=1.0, description="Area expansion ratio eps = Ae/At [-]"
     )
     divergence_half_angle_deg: float = Field(
         15.0, gt=0, lt=45, description="Conical divergence half-angle [deg]"
     )
     efficiency: float = Field(
-        1.0, gt=0, le=1.0,
+        1.0,
+        gt=0,
+        le=1.0,
         description="Additional nozzle efficiency multiplier eta_noz [-] "
         "(divergence loss is computed separately from the half-angle).",
     )
     discharge_coefficient: float = Field(
-        1.0, gt=0, le=1.0,
+        1.0,
+        gt=0,
+        le=1.0,
         description="Throat discharge coefficient Cd_noz [-] (HRAP noz_Cd): "
         "effective throat area = Cd_noz * At.",
     )
@@ -272,7 +259,9 @@ class EfficiencySpec(_Model):
     """Empirical efficiency factors (to be confirmed by fire tests)."""
 
     eta_cstar: float = Field(
-        0.90, gt=0, le=1.0,
+        0.90,
+        gt=0,
+        le=1.0,
         description="Combustion efficiency eta_c* [-]; default 0.90 within the "
         "0.87-0.94 measured for N2O/HDPE by Kamps et al., Aerospace 6, 45 (2019)",
     )
@@ -313,7 +302,7 @@ class EngineConfig(_Model):
 
     # ------------------------------------------------------------------ I/O
     @classmethod
-    def from_yaml(cls, path: Union[str, Path]) -> "EngineConfig":
+    def from_yaml(cls, path: str | Path) -> EngineConfig:
         """Load and validate a configuration from a YAML file."""
         raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
         if not isinstance(raw, dict):
@@ -321,24 +310,22 @@ class EngineConfig(_Model):
         return cls.from_dict(raw)
 
     @classmethod
-    def from_dict(cls, raw: Dict[str, Any]) -> "EngineConfig":
+    def from_dict(cls, raw: dict[str, Any]) -> EngineConfig:
         """Validate a raw dict (applying version migrations first)."""
         try:
             return cls.model_validate(_migrate(dict(raw)))
         except ValueError as exc:
             raise ConfigError(str(exc)) from exc
 
-    def to_yaml(self, path: Union[str, Path]) -> None:
+    def to_yaml(self, path: str | Path) -> None:
         """Serialise to YAML (SI floats, schema version included)."""
         Path(path).write_text(
-            yaml.safe_dump(
-                self.model_dump(mode="json"), sort_keys=False, allow_unicode=True
-            ),
+            yaml.safe_dump(self.model_dump(mode="json"), sort_keys=False, allow_unicode=True),
             encoding="utf-8",
         )
 
 
-def _migrate(raw: Dict[str, Any]) -> Dict[str, Any]:
+def _migrate(raw: dict[str, Any]) -> dict[str, Any]:
     """Upgrade a raw config dict from an older schema version.
 
     Currently only version 0.1 exists; the function is the designated place
@@ -346,9 +333,6 @@ def _migrate(raw: Dict[str, Any]) -> Dict[str, Any]:
     """
     version = str(raw.get("version", CONFIG_VERSION))
     if version != CONFIG_VERSION:
-        raise ConfigError(
-            f"Unsupported config version '{version}' "
-            f"(supported: {CONFIG_VERSION})."
-        )
+        raise ConfigError(f"Unsupported config version '{version}' (supported: {CONFIG_VERSION}).")
     raw["version"] = version
     return raw

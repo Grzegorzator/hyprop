@@ -17,7 +17,6 @@ Example
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Union
 
 from hyprop.core.config import EngineConfig
 from hyprop.core.logging import get_logger
@@ -35,7 +34,7 @@ def _bootstrap() -> None:
         _bootstrapped = True
 
 
-def load_config(path: Union[str, Path]) -> EngineConfig:
+def load_config(path: str | Path) -> EngineConfig:
     """Load, migrate and validate an :class:`EngineConfig` from YAML."""
     _bootstrap()
     config = EngineConfig.from_yaml(path)
@@ -43,7 +42,7 @@ def load_config(path: Union[str, Path]) -> EngineConfig:
     return config
 
 
-def save_config(config: EngineConfig, path: Union[str, Path]) -> None:
+def save_config(config: EngineConfig, path: str | Path) -> None:
     """Serialise an :class:`EngineConfig` to YAML."""
     config.to_yaml(path)
     _log.info("Saved config '%s' -> %s", config.name, path)
@@ -65,13 +64,10 @@ def run(config: EngineConfig):
 
 def run_batch(cases, n_jobs: int = -1):
     """Run a matrix of cases in parallel. Implemented in stage E9."""
-    raise NotImplementedError(
-        "api.run_batch() arrives with stage E9 (batch module)."
-    )
+    raise NotImplementedError("api.run_batch() arrives with stage E9 (batch module).")
 
 
-def size(thrust_n: float, total_impulse_ns: float, apogee_m: float,
-         **kwargs):
+def size(thrust_n: float, total_impulse_ns: float, apogee_m: float, **kwargs):
     """Inverse design: mission -> converged EngineConfig (stage E8).
 
     Returns

@@ -10,13 +10,11 @@ semantics and units.
 
 from __future__ import annotations
 
-from typing import Dict, List
-
 import numpy as np
 import pandas as pd
 
 #: Standard channel names -> (description, SI unit).
-CHANNELS: Dict[str, tuple] = {
+CHANNELS: dict[str, tuple] = {
     "t": ("Time", "s"),
     "thrust": ("Thrust", "N"),
     "pc": ("Chamber pressure", "Pa"),
@@ -51,15 +49,13 @@ class TimeHistory:
     """
 
     def __init__(self) -> None:
-        self._data: Dict[str, List[float]] = {}
+        self._data: dict[str, list[float]] = {}
 
     def record(self, **channels: float) -> None:
         """Append one time step. Every call must use consistent channels."""
         for key, value in channels.items():
             if key not in CHANNELS:
-                raise KeyError(
-                    f"Unknown channel '{key}'. Known: {sorted(CHANNELS)}"
-                )
+                raise KeyError(f"Unknown channel '{key}'. Known: {sorted(CHANNELS)}")
             self._data.setdefault(key, []).append(float(value))
         lengths = {len(v) for v in self._data.values()}
         if len(lengths) > 1:
@@ -72,7 +68,7 @@ class TimeHistory:
         return np.asarray(self._data[channel], dtype=float)
 
     @property
-    def channels(self) -> List[str]:
+    def channels(self) -> list[str]:
         """Names of channels recorded so far."""
         return sorted(self._data)
 

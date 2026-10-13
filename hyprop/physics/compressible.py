@@ -26,13 +26,12 @@ from scipy.optimize import brentq
 from hyprop.core.exceptions import ConvergenceError
 
 _GAMMA_MIN = 1.0001
-_GAMMA_MAX = 5.0/3.0 + 0.2  # generous upper sanity bound
+_GAMMA_MAX = 5.0 / 3.0 + 0.2  # generous upper sanity bound
 
 
 def _check_gamma(gamma: float) -> None:
     if not (_GAMMA_MIN <= gamma <= _GAMMA_MAX):
-        raise ValueError(f"gamma={gamma} outside sane range "
-                         f"[{_GAMMA_MIN}, {_GAMMA_MAX}].")
+        raise ValueError(f"gamma={gamma} outside sane range [{_GAMMA_MIN}, {_GAMMA_MAX}].")
 
 
 def temperature_ratio(mach: float, gamma: float) -> float:
@@ -81,12 +80,10 @@ def area_ratio(mach: float, gamma: float) -> float:
         raise ValueError("mach must be positive.")
     exponent = (gamma + 1.0) / (2.0 * (gamma - 1.0))
     term = (2.0 / (gamma + 1.0)) * (1.0 + 0.5 * (gamma - 1.0) * mach * mach)
-    return term ** exponent / mach
+    return term**exponent / mach
 
 
-def mach_from_area_ratio(
-    ratio: float, gamma: float, branch: str = "supersonic"
-) -> float:
+def mach_from_area_ratio(ratio: float, gamma: float, branch: str = "supersonic") -> float:
     """Invert ``A/A*`` for Mach number on the chosen branch.
 
     Parameters
@@ -108,8 +105,7 @@ def mach_from_area_ratio(
     else:
         raise ValueError("branch must be 'supersonic' or 'subsonic'.")
     try:
-        return brentq(lambda m: area_ratio(m, gamma) - ratio, lo, hi,
-                      xtol=1e-12, rtol=1e-12)
+        return brentq(lambda m: area_ratio(m, gamma) - ratio, lo, hi, xtol=1e-12, rtol=1e-12)
     except ValueError as exc:
         raise ConvergenceError(
             f"mach_from_area_ratio failed (ratio={ratio}, gamma={gamma})."
@@ -125,9 +121,7 @@ def mach_from_pressure_ratio(p_over_p0: float, gamma: float) -> float:
     _check_gamma(gamma)
     if not (0.0 < p_over_p0 <= 1.0):
         raise ValueError("p/p0 must be in (0, 1].")
-    return math.sqrt(
-        2.0 / (gamma - 1.0) * (p_over_p0 ** (-(gamma - 1.0) / gamma) - 1.0)
-    )
+    return math.sqrt(2.0 / (gamma - 1.0) * (p_over_p0 ** (-(gamma - 1.0) / gamma) - 1.0))
 
 
 def vandenkerckhove(gamma: float) -> float:
@@ -137,9 +131,7 @@ def vandenkerckhove(gamma: float) -> float:
     Appears in choked flow and c* (Sutton Eq. 3-24 group).
     """
     _check_gamma(gamma)
-    return math.sqrt(gamma) * (2.0 / (gamma + 1.0)) ** (
-        (gamma + 1.0) / (2.0 * (gamma - 1.0))
-    )
+    return math.sqrt(gamma) * (2.0 / (gamma + 1.0)) ** ((gamma + 1.0) / (2.0 * (gamma - 1.0)))
 
 
 def choked_mass_flux(p0: float, t0: float, gamma: float, r_specific: float) -> float:
@@ -183,9 +175,7 @@ def optimum_expansion_ratio(p0_over_pe: float, gamma: float) -> float:
     return area_ratio(mach_exit, gamma)
 
 
-def thrust_coefficient(
-    gamma: float, eps: float, pe_over_p0: float, pa_over_p0: float
-) -> float:
+def thrust_coefficient(gamma: float, eps: float, pe_over_p0: float, pa_over_p0: float) -> float:
     """Thrust coefficient ``Cf`` of an ideal nozzle (Sutton Eq. 3-30).
 
     Cf = sqrt[ 2*gamma^2/(gamma-1) * (2/(gamma+1))^((gamma+1)/(gamma-1))
@@ -198,16 +188,17 @@ def thrust_coefficient(
     if not (0.0 < pe_over_p0 < 1.0):
         raise ValueError("pe/p0 must be in (0, 1).")
     momentum = math.sqrt(
-        2.0 * gamma * gamma / (gamma - 1.0)
+        2.0
+        * gamma
+        * gamma
+        / (gamma - 1.0)
         * (2.0 / (gamma + 1.0)) ** ((gamma + 1.0) / (gamma - 1.0))
         * (1.0 - pe_over_p0 ** ((gamma - 1.0) / gamma))
     )
     return momentum + (pe_over_p0 - pa_over_p0) * eps
 
 
-def exhaust_velocity_ideal(
-    gamma: float, r_specific: float, t0: float, pe_over_p0: float
-) -> float:
+def exhaust_velocity_ideal(gamma: float, r_specific: float, t0: float, pe_over_p0: float) -> float:
     """Ideal exhaust velocity ``ve`` [m/s] for expansion to ``pe/p0``.
 
     ve = sqrt( 2*gamma/(gamma-1) * R * T0 * [1 - (pe/p0)^((gamma-1)/gamma)] )
@@ -217,6 +208,10 @@ def exhaust_velocity_ideal(
     if not (0.0 < pe_over_p0 < 1.0):
         raise ValueError("pe/p0 must be in (0, 1).")
     return math.sqrt(
-        2.0 * gamma / (gamma - 1.0) * r_specific * t0
+        2.0
+        * gamma
+        / (gamma - 1.0)
+        * r_specific
+        * t0
         * (1.0 - pe_over_p0 ** ((gamma - 1.0) / gamma))
     )

@@ -28,6 +28,4 @@ class SPIInjector(InjectorModel):
         dp = self._dp(upstream, p_chamber_pa)
         if dp <= 0.0:
             return 0.0
-        return self.cd * self.total_area_m2 * math.sqrt(
-            2.0 * upstream.density_kg_m3 * dp
-        )
+        return self.cd * self.total_area_m2 * math.sqrt(2.0 * upstream.density_kg_m3 * dp)

@@ -8,12 +8,10 @@ Isp_ideal (expansion to 1 atm) = 247 s.
 
 import pytest
 
-from hyprop.cea.backend import CEAResult, ExpansionResult, StationState
-
 cantera = pytest.importorskip("cantera", reason="Cantera not installed")
 
-from hyprop.cea.cache import CachedBackend                     # noqa: E402
-from hyprop.cea.cantera_backend import CanteraBackend          # noqa: E402
+from hyprop.cea.cache import CachedBackend  # noqa: E402
+from hyprop.cea.cantera_backend import CanteraBackend  # noqa: E402
 
 PC = 35e5
 OF = 6.5
@@ -43,12 +41,10 @@ def test_cstar_vs_user_ideal_formula(result):
     from hyprop.physics.compressible import cstar_ideal
 
     chamber = result.chamber
-    ideal = cstar_ideal(
-        chamber.gamma, chamber.r_specific_j_kg_k, chamber.temperature_k
-    )
-    assert ideal == pytest.approx(1589.0, rel=0.01)          # user's number
+    ideal = cstar_ideal(chamber.gamma, chamber.r_specific_j_kg_k, chamber.temperature_k)
+    assert ideal == pytest.approx(1589.0, rel=0.01)  # user's number
     excess = result.cstar_m_s / ideal - 1.0
-    assert 0.0 < excess < 0.04                               # equilibrium gain
+    assert 0.0 < excess < 0.04  # equilibrium gain
 
 
 def test_throat_state_is_physical(result):
@@ -60,8 +56,8 @@ def test_throat_state_is_physical(result):
 def test_equilibrium_isp_bounds_frozen(result):
     isp_eq = result.isp_s(PA, mode="equilibrium")
     isp_fr = result.isp_s(PA, mode="frozen")
-    assert isp_eq > isp_fr                      # D6: frozen is lower bound
-    assert (isp_eq - isp_fr) / isp_eq < 0.08    # small motor: few percent
+    assert isp_eq > isp_fr  # D6: frozen is lower bound
+    assert (isp_eq - isp_fr) / isp_eq < 0.08  # small motor: few percent
 
 
 def test_isp_close_to_user_reference(backend):
@@ -75,8 +71,7 @@ def test_isp_close_to_user_reference(backend):
 def test_exit_pressure_decreases_with_eps(backend):
     r4 = backend.query(of=OF, pc=PC, eps=4.0)
     r8 = backend.query(of=OF, pc=PC, eps=8.0)
-    assert r8.equilibrium.exit_state.pressure_pa < \
-        r4.equilibrium.exit_state.pressure_pa
+    assert r8.equilibrium.exit_state.pressure_pa < r4.equilibrium.exit_state.pressure_pa
 
 
 def test_major_species_present(result):
@@ -146,4 +141,5 @@ def test_carbon_to_oxygen_validity_flag():
     assert carbon_to_oxygen_ratio(pe, n2o, 3.0) > 1.0
     assert carbon_to_oxygen_ratio(pe, n2o, 3.2) < 1.0
     assert carbon_to_oxygen_ratio(pe, n2o, 3.0) == pytest.approx(
-        (1 / 14.0266e-3) / (3.0 / 44.0128e-3), rel=1e-3)
+        (1 / 14.0266e-3) / (3.0 / 44.0128e-3), rel=1e-3
+    )

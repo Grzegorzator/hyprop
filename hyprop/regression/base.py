@@ -47,7 +47,5 @@ class RegressionModel(ABC):
     @staticmethod
     def validate_flux_basis(flux_basis: str) -> str:
         if flux_basis not in ("oxidizer", "total"):
-            raise ConfigError(
-                f"flux_basis must be 'oxidizer' or 'total', got {flux_basis!r}."
-            )
+            raise ConfigError(f"flux_basis must be 'oxidizer' or 'total', got {flux_basis!r}.")
         return flux_basis

@@ -50,9 +50,10 @@ def ideal_effective_exhaust_velocity(
     The conical divergence factor ``lambda`` multiplies the momentum term
     only, not the pressure term (Sutton Eq. 3-34 and the note below it).
     """
-    return divergence * exhaust_velocity_m_s + (
-        exit_pressure_pa - ambient_pressure_pa
-    ) * expansion_ratio * cstar_ideal_m_s / pc_pa
+    return (
+        divergence * exhaust_velocity_m_s
+        + (exit_pressure_pa - ambient_pressure_pa) * expansion_ratio * cstar_ideal_m_s / pc_pa
+    )
 
 
 def delivered_thrust(
@@ -86,9 +87,7 @@ def cstar_delivered(pc_pa: float, throat_area_m2: float, mdot_kg_s: float) -> fl
     return pc_pa * throat_area_m2 / mdot_kg_s
 
 
-def thrust_coefficient_delivered(
-    thrust_n: float, pc_pa: float, throat_area_m2: float
-) -> float:
+def thrust_coefficient_delivered(thrust_n: float, pc_pa: float, throat_area_m2: float) -> float:
     """Delivered thrust coefficient Cf [-] = F/(pc*At)."""
     if pc_pa <= 0.0 or throat_area_m2 <= 0.0:
         raise ValueError("pc and At must be positive.")

@@ -11,17 +11,18 @@ from tests.test_solver import CFG, _StubCEA
 
 @pytest.fixture()
 def stub_cea(monkeypatch):
-    monkeypatch.setattr(
-        solver_module, "_build_cea_table", lambda config, eps: _StubCEA()
-    )
+    monkeypatch.setattr(solver_module, "_build_cea_table", lambda config, eps: _StubCEA())
 
 
 def test_apply_overrides_paths():
     config = EngineConfig.from_dict(CFG)
-    out = apply_overrides(config, {
-        "injector.discharge_coefficient": 0.5,
-        "grain.port.initial_diameter_m": 0.030,
-    })
+    out = apply_overrides(
+        config,
+        {
+            "injector.discharge_coefficient": 0.5,
+            "grain.port.initial_diameter_m": 0.030,
+        },
+    )
     assert out.injector.discharge_coefficient == 0.5
     assert out.grain.port["initial_diameter_m"] == 0.030
     assert config.injector.discharge_coefficient == 0.60  # base untouched
@@ -42,7 +43,7 @@ def test_run_batch_and_failed_case(stub_cea):
     cases = [
         {"injector.discharge_coefficient": 0.55},
         {"injector.discharge_coefficient": 0.65},
-        {"injector.discharge_coefficient": -1.0},   # invalid -> NaN row
+        {"injector.discharge_coefficient": -1.0},  # invalid -> NaN row
     ]
     frame = run_batch(config, cases, progress=False)
     assert len(frame) == 3
@@ -58,9 +59,9 @@ def test_oat_sensitivity_signs(stub_cea):
     config = EngineConfig.from_dict(CFG)
     table = oat_sensitivity(
         config,
-        {"injector.discharge_coefficient": 0.60,
-         "nozzle.throat_diameter_m": 11.5e-3},
-        outputs=("total_impulse_ns", "peak_pc_pa"), delta=0.05,
+        {"injector.discharge_coefficient": 0.60, "nozzle.throat_diameter_m": 11.5e-3},
+        outputs=("total_impulse_ns", "peak_pc_pa"),
+        delta=0.05,
     )
     assert table.loc["injector.discharge_coefficient", "peak_pc_pa"] > 0
     assert table.loc["nozzle.throat_diameter_m", "peak_pc_pa"] < 0
@@ -73,12 +74,15 @@ def test_monte_carlo_bands(stub_cea):
     result = monte_carlo(
         config,
         {"injector.discharge_coefficient": ("normal", 0.60, 0.02)},
-        samples=12, outputs=("total_impulse_ns",),
+        samples=12,
+        outputs=("total_impulse_ns",),
     )
     bands = result["bands"]
-    assert bands.loc["total_impulse_ns", "p5"] <= \
-        bands.loc["total_impulse_ns", "p50"] <= \
-        bands.loc["total_impulse_ns", "p95"]
+    assert (
+        bands.loc["total_impulse_ns", "p5"]
+        <= bands.loc["total_impulse_ns", "p50"]
+        <= bands.loc["total_impulse_ns", "p95"]
+    )
 
 
 def test_regime_flags(stub_cea):
@@ -86,5 +90,5 @@ def test_regime_flags(stub_cea):
 
     result = solver_module.run_simulation(EngineConfig.from_dict(CFG))
     numbers = port_numbers(result.history)
-    assert numbers["Re"].max() > 1e5            # clearly turbulent motor
+    assert numbers["Re"].max() > 1e5  # clearly turbulent motor
     assert isinstance(regime_flags(result.history), list)

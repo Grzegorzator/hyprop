@@ -24,13 +24,13 @@ import math
 from hyprop.core.exceptions import BackendUnavailableError, PropertyRangeError
 
 #: Critical parameters (ESDU 91022; NIST agrees to 4 digits).
-T_CRIT = 309.57          # [K]
-P_CRIT = 7.251e6         # [Pa]
-RHO_CRIT = 452.0         # [kg/m^3]
-T_BOIL = 184.7           # [K] normal boiling point
-MOLAR_MASS = 0.044013    # [kg/mol]
+T_CRIT = 309.57  # [K]
+P_CRIT = 7.251e6  # [Pa]
+RHO_CRIT = 452.0  # [kg/m^3]
+T_BOIL = 184.7  # [K] normal boiling point
+MOLAR_MASS = 0.044013  # [kg/mol]
 
-_T_MIN = 183.0           # validity guard [K]
+_T_MIN = 183.0  # validity guard [K]
 
 #: Above this temperature the ESDU set loses accuracy vs the reference EOS
 #: (CoolProp, Lemmon & Span 2006): cp_liquid -2.5 % at 297 K, -5 % at
@@ -38,7 +38,7 @@ _T_MIN = 183.0           # validity guard [K]
 #: h_vap (Watson scaling, not an ESDU fit) is +1.6 % at 280 K, +2.4 % at
 #: 293 K and ~+2.8 % at 299-305 K. p_sat and rho_liquid stay within
 #: 0.4 % / 1.2 % from 183 K up to 309 K (docs/VALIDATION.md, item 4).
-T_ESDU_WARN = 297.0      # [K]
+T_ESDU_WARN = 297.0  # [K]
 _warned: set = set()
 
 
@@ -47,11 +47,15 @@ def _warn_near_critical(temperature_k: float, quantity: str) -> None:
     if temperature_k > T_ESDU_WARN and quantity not in _warned:
         _warned.add(quantity)
         from hyprop.core.logging import get_logger
+
         get_logger(__name__).warning(
             "ESDU 91022 %s used at T = %.1f K > %.0f K: accuracy degrades "
             "towards the critical point (see T_ESDU_WARN); prefer the "
-            "CoolProp backend for warm tanks.", quantity, temperature_k,
-            T_ESDU_WARN)
+            "CoolProp backend for warm tanks.",
+            quantity,
+            temperature_k,
+            T_ESDU_WARN,
+        )
 
 
 def _check_range(temperature_k: float) -> None:
@@ -85,8 +89,7 @@ class ESDU91022:
         x = 1.0 - temperature_k / T_CRIT
         b = (1.72328, -0.8395, 0.5106, -0.10412)
         return RHO_CRIT * math.exp(
-            b[0] * x ** (1 / 3) + b[1] * x ** (2 / 3) + b[2] * x
-            + b[3] * x ** (4 / 3)
+            b[0] * x ** (1 / 3) + b[1] * x ** (2 / 3) + b[2] * x + b[3] * x ** (4 / 3)
         )
 
     @staticmethod
@@ -97,8 +100,11 @@ class ESDU91022:
         y = T_CRIT / temperature_k - 1.0
         b = (-1.009, -6.28792, 7.50332, -7.90463, 0.629427)
         return RHO_CRIT * math.exp(
-            b[0] * y ** (1 / 3) + b[1] * y ** (2 / 3) + b[2] * y
-            + b[3] * y ** (4 / 3) + b[4] * y ** (5 / 3)
+            b[0] * y ** (1 / 3)
+            + b[1] * y ** (2 / 3)
+            + b[2] * y
+            + b[3] * y ** (4 / 3)
+            + b[4] * y ** (5 / 3)
         )
 
     @staticmethod
@@ -116,9 +122,7 @@ class ESDU91022:
         _check_range(temperature_k)
         _warn_near_critical(temperature_k, "cp_liquid")
         x = 1.0 - temperature_k / T_CRIT
-        return 2499.73 * (
-            1.0 + 0.023454 / x - 3.80136 * x + 13.0945 * x**2 - 14.5180 * x**3
-        )
+        return 2499.73 * (1.0 + 0.023454 / x - 3.80136 * x + 13.0945 * x**2 - 14.5180 * x**3)
 
 
 class CoolPropN2O:
@@ -169,10 +173,8 @@ class CoolPropN2O:
 
     def state_ps(self, pressure_pa: float, entropy_j_kg_k: float):
         """(rho, h) after isentropic expansion to ``pressure_pa``."""
-        rho = self._cp.PropsSI("D", "P", pressure_pa, "S", entropy_j_kg_k,
-                               self._FLUID)
-        h = self._cp.PropsSI("H", "P", pressure_pa, "S", entropy_j_kg_k,
-                             self._FLUID)
+        rho = self._cp.PropsSI("D", "P", pressure_pa, "S", entropy_j_kg_k, self._FLUID)
+        h = self._cp.PropsSI("H", "P", pressure_pa, "S", entropy_j_kg_k, self._FLUID)
         return rho, h
 
 

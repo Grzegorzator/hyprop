@@ -16,7 +16,7 @@ impulse-weighted ROP values.
 from __future__ import annotations
 
 import itertools
-from typing import Dict, Iterable, List, Sequence, Tuple
+from collections.abc import Iterable, Sequence
 
 import pandas as pd
 
@@ -26,7 +26,7 @@ from hyprop.oppoints import analyze
 
 _log = get_logger(__name__)
 
-Case = Dict[str, float]
+Case = dict[str, float]
 
 #: Impulse-weighted channels copied into batch results.
 _ROP_CHANNELS = ("thrust", "pc", "of", "isp")
@@ -44,16 +44,16 @@ def apply_overrides(config: EngineConfig, case: Case) -> EngineConfig:
     return EngineConfig.from_dict(raw)
 
 
-def build_grid(parameters: Dict[str, Sequence[float]]) -> List[Case]:
+def build_grid(parameters: dict[str, Sequence[float]]) -> list[Case]:
     """Full factorial grid of ``{path: [values...]}``."""
     names = list(parameters)
-    return [dict(zip(names, combo))
-            for combo in itertools.product(*(parameters[n] for n in names))]
+    return [
+        dict(zip(names, combo, strict=False))
+        for combo in itertools.product(*(parameters[n] for n in names))
+    ]
 
 
-def build_lhs(
-    ranges: Dict[str, Tuple[float, float]], samples: int, seed: int = 0
-) -> List[Case]:
+def build_lhs(ranges: dict[str, tuple[float, float]], samples: int, seed: int = 0) -> list[Case]:
     """Latin Hypercube sample of ``{path: (low, high)}``."""
     from scipy.stats import qmc
 
@@ -63,15 +63,15 @@ def build_lhs(
     lows = [ranges[n][0] for n in names]
     highs = [ranges[n][1] for n in names]
     scaled = qmc.scale(unit, lows, highs)
-    return [dict(zip(names, row)) for row in scaled]
+    return [dict(zip(names, row, strict=False)) for row in scaled]
 
 
-def run_case(config: EngineConfig, case: Case) -> Dict[str, float]:
+def run_case(config: EngineConfig, case: Case) -> dict[str, float]:
     """Run one case; returns overrides + summary + ROP values."""
     from hyprop.simulation import run_simulation
 
     result = run_simulation(apply_overrides(config, case))
-    row: Dict[str, float] = dict(case)
+    row: dict[str, float] = dict(case)
     row.update(result.summary)
     iw = analyze(result).point("impulse_weighted")
     row.update({f"{ch}_iw": iw[ch] for ch in _ROP_CHANNELS})
@@ -80,16 +80,14 @@ def run_case(config: EngineConfig, case: Case) -> Dict[str, float]:
     return row
 
 
-def run_batch(
-    config: EngineConfig, cases: Iterable[Case], progress: bool = True
-) -> pd.DataFrame:
+def run_batch(config: EngineConfig, cases: Iterable[Case], progress: bool = True) -> pd.DataFrame:
     """Execute all cases; failed cases yield NaN rows (logged)."""
     rows = []
     cases = list(cases)
     for index, case in enumerate(cases):
         try:
             rows.append(run_case(config, case))
-        except Exception as exc:                    # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             _log.warning("Case %d failed: %s (%s)", index, case, exc)
             rows.append(dict(case))
         if progress and (index + 1) % 10 == 0:

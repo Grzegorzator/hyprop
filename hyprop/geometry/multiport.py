@@ -48,9 +48,7 @@ class MultiportGrain(GrainGeometry):
         self.bolt_circle_radius_m = 0.5 * bolt_circle_diameter_m
         self.central_port_diameter_m = central_port_diameter_m
         if self._initial_min_web() <= 0.0:
-            raise ConfigError(
-                "Initial multiport layout has overlapping ports/walls."
-            )
+            raise ConfigError("Initial multiport layout has overlapping ports/walls.")
 
     # ------------------------------------------------------------ helpers
     def _radius(self, w: float) -> float:
@@ -84,16 +82,10 @@ class MultiportGrain(GrainGeometry):
 
     def web_remaining(self, w: float) -> float:
         radius = self._radius(w)
-        chord = 2.0 * self.bolt_circle_radius_m * math.sin(
-            math.pi / self.port_count
-        )
+        chord = 2.0 * self.bolt_circle_radius_m * math.sin(math.pi / self.port_count)
         web_port_port = chord - 2.0 * radius
-        web_port_wall = (
-            0.5 * self.outer_diameter_m - self.bolt_circle_radius_m - radius
-        )
+        web_port_wall = 0.5 * self.outer_diameter_m - self.bolt_circle_radius_m - radius
         webs = [web_port_port, web_port_wall]
         if self._has_central():
-            webs.append(
-                self.bolt_circle_radius_m - radius - self._central_radius(w)
-            )
+            webs.append(self.bolt_circle_radius_m - radius - self._central_radius(w))
         return min(webs)

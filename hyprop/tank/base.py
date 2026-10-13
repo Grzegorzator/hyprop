@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -26,8 +25,8 @@ class FluidState:
     vapor_pressure_pa: float
     #: 'liquid' | 'vapor' - what currently leaves the tank.
     phase: str = "liquid"
-    enthalpy_j_kg: Optional[float] = None
-    entropy_j_kg_k: Optional[float] = None
+    enthalpy_j_kg: float | None = None
+    entropy_j_kg_k: float | None = None
 
 
 @dataclass(frozen=True)

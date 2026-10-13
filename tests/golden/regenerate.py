@@ -24,15 +24,23 @@ from cases import CASES, GOLDEN_DIR, REPO  # noqa: E402
 def _meta() -> dict:
     import cantera
     import numpy
-    commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO,
-                            capture_output=True, text=True).stdout.strip()
-    return dict(generated=_dt.datetime.now().isoformat(timespec="seconds"), commit=commit,
-                python=sys.version.split()[0], numpy=numpy.__version__, cantera=cantera.__version__)
+
+    commit = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True
+    ).stdout.strip()
+    return dict(
+        generated=_dt.datetime.now().isoformat(timespec="seconds"),
+        commit=commit,
+        python=sys.version.split()[0],
+        numpy=numpy.__version__,
+        cantera=cantera.__version__,
+    )
 
 
 def main(names) -> None:
     import logging
     import warnings
+
     logging.disable(logging.WARNING)
     warnings.filterwarnings("ignore")
     for name in names or CASES:

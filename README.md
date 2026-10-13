@@ -112,8 +112,14 @@ print(result.summary["total_impulse_ns"], result.thermo_backend)
 
 cea = get_backend("cantera", fuel="ldpe", oxidizer="n2o")
 r = cea.query(of=6.3, pc=32e5, eps=5.0)
-print(r.chamber.temperature_k, r.chamber.gamma, r.chamber.gamma_eq,
-      r.cstar_m_s, r.isp_s(101325.0), r.isp_s(101325.0, mode="frozen"))
+print(
+    r.chamber.temperature_k,
+    r.chamber.gamma,
+    r.chamber.gamma_eq,
+    r.cstar_m_s,
+    r.isp_s(101325.0),
+    r.isp_s(101325.0, mode="frozen"),
+)
 ```
 
 ## Layout

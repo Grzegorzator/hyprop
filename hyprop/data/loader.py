@@ -10,7 +10,7 @@ confirmation against primary literature or fire tests.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -29,7 +29,7 @@ def _find(kind: str, name: str) -> Path:
         path = base / kind / f"{name.lower()}.yaml"
         if path.exists():
             return path
-    return _DATA_DIR / kind / f"{name.lower()}.yaml"   # -> DataError
+    return _DATA_DIR / kind / f"{name.lower()}.yaml"  # -> DataError
 
 
 class _Model(BaseModel):
@@ -41,9 +41,7 @@ class SourcedValue(_Model):
 
     value: float
     source: str
-    verify: bool = Field(
-        False, description="True if the value still awaits confirmation"
-    )
+    verify: bool = Field(False, description="True if the value still awaits confirmation")
 
 
 class RegressionEntry(_Model):
@@ -66,13 +64,13 @@ class FuelData(_Model):
     name: str
     display_name: str
     density: SourcedValue
-    composition: Dict[str, float]
+    composition: dict[str, float]
     composition_source: str
-    enthalpy_of_formation: Optional[SourcedValue] = None
-    regression: List[RegressionEntry] = Field(default_factory=list)
+    enthalpy_of_formation: SourcedValue | None = None
+    regression: list[RegressionEntry] = Field(default_factory=list)
     notes: str = ""
 
-    def regression_for(self, oxidizer: str) -> List[RegressionEntry]:
+    def regression_for(self, oxidizer: str) -> list[RegressionEntry]:
         """Return regression datasets available for ``oxidizer``."""
         return [r for r in self.regression if r.oxidizer == oxidizer.lower()]
 
@@ -83,14 +81,14 @@ class OxidizerData(_Model):
     schema_id: str = Field(..., alias="schema")
     name: str
     display_name: str
-    formula: Dict[str, float]
+    formula: dict[str, float]
     molar_mass_kg_mol: float = Field(..., gt=0)
-    critical_temperature_k: Optional[float] = None
-    critical_pressure_pa: Optional[float] = None
+    critical_temperature_k: float | None = None
+    critical_pressure_pa: float | None = None
     phase_at_storage: str
-    property_backends: List[str] = Field(default_factory=list)
-    reference_density: Optional[SourcedValue] = None
-    parameters: Dict[str, Any] = Field(default_factory=dict)
+    property_backends: list[str] = Field(default_factory=list)
+    reference_density: SourcedValue | None = None
+    parameters: dict[str, Any] = Field(default_factory=dict)
     notes: str = ""
 
 
@@ -122,18 +120,18 @@ def load_oxidizer(name: str) -> OxidizerData:
         raise DataError(f"Invalid oxidizer entry '{name}': {exc}") from exc
 
 
-def _list(kind: str) -> List[str]:
+def _list(kind: str) -> list[str]:
     names = {p.stem for p in (_DATA_DIR / kind).glob("*.yaml")}
     if (_USER_DIR / kind).is_dir():
         names |= {p.stem for p in (_USER_DIR / kind).glob("*.yaml")}
     return sorted(names)
 
 
-def list_fuels() -> List[str]:
+def list_fuels() -> list[str]:
     """Names of all fuels (built-in + user database)."""
     return _list("fuels")
 
 
-def list_oxidizers() -> List[str]:
+def list_oxidizers() -> list[str]:
     """Names of all oxidizers (built-in + user database)."""
     return _list("oxidizers")

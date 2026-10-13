@@ -21,19 +21,22 @@ Weightings (user specification):
 
 from __future__ import annotations
 
-from typing import Callable, Dict, Union
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
-#: NumPy 2.x renamed trapz -> trapezoid; support both.
-_trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
-
 
 from hyprop.core.state import TimeHistory
 
-WeightSpec = Union[str, Callable[[np.ndarray, TimeHistory], np.ndarray]]
+#: NumPy 2.x renamed trapz -> trapezoid; support both.
+_trapz: Callable[..., Any] = next(
+    getattr(np, name) for name in ("trapezoid", "trapz") if hasattr(np, name)
+)
+
+WeightSpec = str | Callable[[np.ndarray, TimeHistory], np.ndarray]
 
 #: Named weight functions: name -> callable(t, history) -> w array.
-WEIGHTINGS: Dict[str, Callable] = {
+WEIGHTINGS: dict[str, Callable] = {
     "time": lambda t, h: np.ones_like(t),
     "thrust": lambda t, h: h["thrust"],
     "mdot": lambda t, h: h["mdot_total"],
@@ -52,8 +55,7 @@ def weight_array(history: TimeHistory, weighting: WeightSpec) -> np.ndarray:
             w = np.asarray(WEIGHTINGS[weighting](t, history), dtype=float)
         except KeyError:
             raise ValueError(
-                f"Unknown weighting '{weighting}'. "
-                f"Known: {sorted(WEIGHTINGS)} or a callable."
+                f"Unknown weighting '{weighting}'. Known: {sorted(WEIGHTINGS)} or a callable."
             ) from None
     if w.shape != t.shape:
         raise ValueError("Weight array must match the time base.")
@@ -62,9 +64,7 @@ def weight_array(history: TimeHistory, weighting: WeightSpec) -> np.ndarray:
     return np.maximum(w, 0.0)
 
 
-def weighted_average(
-    history: TimeHistory, channel: str, weighting: WeightSpec = "thrust"
-) -> float:
+def weighted_average(history: TimeHistory, channel: str, weighting: WeightSpec = "thrust") -> float:
     """X_bar = int(X*w dt) / int(w dt) using trapezoidal integration."""
     t = history["t"]
     x = history[channel]
@@ -75,9 +75,10 @@ def weighted_average(
 
 def averages_all_channels(
     history: TimeHistory, weighting: WeightSpec = "thrust"
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Weighted average of every recorded channel (except time itself)."""
     return {
         channel: weighted_average(history, channel, weighting)
-        for channel in history.channels if channel != "t"
+        for channel in history.channels
+        if channel != "t"
     }
