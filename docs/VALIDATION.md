@@ -1,12 +1,12 @@
 # HyProp – raport walidacji (etap 1)
 
-Wygenerowano: 2026-10-13 20:50, commit `e0c624d`  
+Wygenerowano: 2026-10-13 21:12, commit `22b579b`  
 Środowisko: Python 3.11.17 (Linux), numpy 2.4.6, scipy 1.17.1, cantera 3.2.0, CoolProp 8.0.0, rocketcea 1.2.3, pymoo 0.6.2, shapely 2.2.0, pint 0.25.3  
 Polecenie: `python -m validation.run_all` (zmienne środowiskowe: patrz `validation/README.md`).
 
 Zasada: wiersz może mieć PASS tylko przy sprawdzalnym źródle referencji. Brak źródła = `TODO: brak referencji`. INFO = wielkość raportowana bez kryterium.
 
-**Razem: INFO: 49, PASS: 129, TODO: brak referencji: 2**
+**Razem: INFO: 48, PASS: 130, TODO: brak referencji: 2**
 
 ## Podsumowanie etapu 1
 
@@ -60,7 +60,7 @@ Zasada: wiersz może mieć PASS tylko przy sprawdzalnym źródle referencji. Bra
 ## 0. Zestaw testów (wszystkie opcjonalne backendy zainstalowane)
 
 ```
-131 passed in 61.63s (0:01:01)
+134 passed in 142.32s (0:02:22)
 ```
 ## 1. Odtworzenie deklaracji z README
 
@@ -83,20 +83,20 @@ Podsumowanie: INFO: 5, PASS: 60
 | 13 | a regresji htpb [m/s·(kg/m²s)^-n] | N2O, baza HyProp[0] | 0.000198 | HRAP `HTPB.mat` prop_Reg=[0.198, 0.325] (mm/s; propellant_template.m) sha256 acda3a38a891… | 0.000198 | -0.00 % | ±0.01 % | **PASS** |  |
 | 14 | n regresji htpb | N2O, baza HyProp[0] | 0.325 | HRAP `HTPB.mat` prop_Reg=[0.198, 0.325] (mm/s; propellant_template.m) sha256 acda3a38a891… | 0.325 | +0.00 % | ±0.01 % | **PASS** |  |
 | 15 | a z CSV HRAP (fit ṙ=aG^n) | prusak_v2 | 0.000104 | HRAP `HDPE.mat` 0.104 mm/s; HRAP v1.06 (R. Nickel, UTK), wynik `prusakv2_HRAP_output.csv` sha256 4eeaffee43d5… | 0.000104 | -0.01 % | ±0.1 % | **PASS** | n_fit=0.3520. Kolumna CSV „Regression Rate (mm/s)” zawiera faktycznie m/s (potwierdzone przez d(ID)/dt) – stąd deklaracja „a=1.040e-4 SI”. |
-| 16 | It | examples/pe_05kN.yaml | 3714.0 Ns | README.md (v0.2, sekcje Validation/Examples) | 3714.5 Ns | +0.4791 Ns | ±0.5 Ns | **PASS** |  |
-| 17 | Pc (szczyt) | examples/pe_05kN.yaml | 36.9 bar | README.md (v0.2, sekcje Validation/Examples) | 36.88 bar | -0.02461 bar | ±0.05 bar | **PASS** |  |
-| 18 | LRO | examples/pe_05kN.yaml | 7.35 s | README.md (v0.2, sekcje Validation/Examples) | 7.35 s | -1.119e-13 s | ±0.005 s | **PASS** |  |
-| 19 | Isp średni | examples/pe_05kN.yaml | 194.0 s | README.md (v0.2, sekcje Validation/Examples) | 194.0 s | -0.02938 s | ±0.5 s | **PASS** |  |
-| 20 | Średnia czasowa F vs IW [%] | ROP examples/pe_05kN.yaml | -51 pp | README.md (v0.2, sekcje Validation/Examples) | -51.37 pp | -0.3656 pp | ±1 pp | **PASS** | README podaje liczby całkowite. Tolerancja ±1 pp. |
-| 21 | Średnia czasowa Pc vs IW [%] | ROP examples/pe_05kN.yaml | -47 pp | README.md (v0.2, sekcje Validation/Examples) | -47.36 pp | -0.3605 pp | ±1 pp | **PASS** |  |
-| 22 | Udział fazy ciekłej w It [%] | ROP examples/pe_05kN.yaml | 92.5 pp | README.md (v0.2, sekcje Validation/Examples) | 92.52 pp | +0.01671 pp | ±0.05 pp | **PASS** |  |
-| 23 | Udział fazy ciekłej w czasie [%] | ROP examples/pe_05kN.yaml | 42.8 pp | README.md (v0.2, sekcje Validation/Examples) | 42.77 pp | -0.02611 pp | ±0.05 pp | **PASS** |  |
+| 16 | It | examples/pe_05kN.yaml | 3501.0 Ns | README.md (v0.2, sekcje Validation/Examples) | 3500.9 Ns | -0.1489 Ns | ±0.5 Ns | **PASS** |  |
+| 17 | Pc (szczyt) | examples/pe_05kN.yaml | 36 bar | README.md (v0.2, sekcje Validation/Examples) | 35.97 bar | -0.0272 bar | ±0.05 bar | **PASS** |  |
+| 18 | LRO | examples/pe_05kN.yaml | 7.11 s | README.md (v0.2, sekcje Validation/Examples) | 7.11 s | -1.075e-13 s | ±0.005 s | **PASS** |  |
+| 19 | Isp średni | examples/pe_05kN.yaml | 184.0 s | README.md (v0.2, sekcje Validation/Examples) | 183.7 s | -0.3238 s | ±0.5 s | **PASS** |  |
+| 20 | Średnia czasowa F vs IW [%] | ROP examples/pe_05kN.yaml | -51 pp | README.md (v0.2, sekcje Validation/Examples) | -51.18 pp | -0.1809 pp | ±1 pp | **PASS** | README podaje liczby całkowite. Tolerancja ±1 pp. |
+| 21 | Średnia czasowa Pc vs IW [%] | ROP examples/pe_05kN.yaml | -47 pp | README.md (v0.2, sekcje Validation/Examples) | -47.1 pp | -0.1028 pp | ±1 pp | **PASS** |  |
+| 22 | Udział fazy ciekłej w It [%] | ROP examples/pe_05kN.yaml | 92.8 pp | README.md (v0.2, sekcje Validation/Examples) | 92.8 pp | -0.003057 pp | ±0.05 pp | **PASS** |  |
+| 23 | Udział fazy ciekłej w czasie [%] | ROP examples/pe_05kN.yaml | 43.1 pp | README.md (v0.2, sekcje Validation/Examples) | 43.13 pp | +0.03487 pp | ±0.05 pp | **PASS** |  |
 | 24 | Liczba iteracji | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 8 | README.md (v0.2, sekcje Validation/Examples) | 8 | +0 | ±0 | **PASS** | Tolerancja sizingu 1 % (v0.1: 3 %); v0.1 padało na błędzie B1. |
-| 25 | F_iw | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 498.0 N | README.md (v0.2, sekcje Validation/Examples) | 497.8 N | -0.1643 N | ±0.5 N | **PASS** |  |
-| 26 | It | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 4026.0 Ns | README.md (v0.2, sekcje Validation/Examples) | 4025.8 Ns | -0.2229 Ns | ±0.5 Ns | **PASS** |  |
-| 27 | Dt | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 12 mm | README.md (v0.2, sekcje Validation/Examples) | 12 mm | +0.0003731 mm | ±0.05 mm | **PASS** |  |
-| 28 | eps | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 5 | README.md (v0.2, sekcje Validation/Examples) | 5.002 | +0.001587 | ±0.005 | **PASS** |  |
-| 29 | Apogeum (m_dry = 7 kg) | examples/trajectory_pe_3km.py | 3755.0 m | README.md (v0.2, sekcje Validation/Examples) | 3754.7 m | -0.3035 m | ±0.5 m | **PASS** | m_dry, Cd, D to założenia (skrypt); bez referencji lotnej. |
+| 25 | F_iw | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 498.0 N | README.md (v0.2, sekcje Validation/Examples) | 498.0 N | -0.01135 N | ±0.5 N | **PASS** |  |
+| 26 | It | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 4030.0 Ns | README.md (v0.2, sekcje Validation/Examples) | 4030.4 Ns | +0.437 Ns | ±0.5 Ns | **PASS** |  |
+| 27 | Dt | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 12 mm | README.md (v0.2, sekcje Validation/Examples) | 12 mm | +0.0008843 mm | ±0.05 mm | **PASS** |  |
+| 28 | eps | examples/size_pe_3km.py (api.size LDPE 0.5 kN / 4000 Ns / 3 km, Cantera) | 5 | README.md (v0.2, sekcje Validation/Examples) | 4.999 | -0.001355 | ±0.005 | **PASS** |  |
+| 29 | Apogeum (m_dry = 7 kg) | examples/trajectory_pe_3km.py | 3736.0 m | README.md (v0.2, sekcje Validation/Examples) | 3735.8 m | -0.1813 m | ±0.5 m | **PASS** | m_dry, Cd, D to założenia (skrypt); bez referencji lotnej. |
 | 30 | ΔHf PE [kJ/mol C2H4] | baza HyProp `ldpe`/`hdpe` | -56.36 | Splitstone & Johnson, J. Res. NBS 78A(5) 611-616 (1974), doi:10.6028/jres.078A.038 | -56.36 | +0.00 % | ±0.01 % | **PASS** | 72 % krystaliczności. NASA CEA thermo.inp '(CH2)x(cr)' ma -51.2 (McBride 1996). |
 | 31 | Tc – cantera | PE/N2O O/F 6.5, Pc 35 bar | 3276.2 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 3278.3 | +0.06 % | ±0.5 % | **PASS** |  |
 | 32 | c* – cantera | PE/N2O O/F 6.5, Pc 35 bar | 1615.8 | NASA CEA, pakiet `cea` 3.3.4 (NASA Glenn; Gordon & McBride RP-1311), reagent (CH2)x(cr) z ΔHf HyProp | 1617.4 | +0.10 % | ±0.5 % | **PASS** |  |
@@ -244,7 +244,7 @@ Podsumowanie: INFO: 9, TODO: brak referencji: 1
 
 ## 6. Regresja paliwa – literatura
 
-Podsumowanie: INFO: 13, PASS: 2
+Podsumowanie: INFO: 12, PASS: 3
 
 | # | Wielkość | Przypadek | Referencja | Źródło referencji | HyProp | Odchyłka | Tolerancja | Status | Komentarz |
 |---|---|---|---|---|---|---|---|---|---|
@@ -257,12 +257,12 @@ Podsumowanie: INFO: 13, PASS: 2
 | 7 | ṙ preset HRAP vs Moon 2019 przy G_o = 100 | PE/N2O, wieloportowe | 0.4571 mm/s | Moon et al., Aerospace 2019, 6, 28, doi:10.3390/aerospace6030028, Eq. (1): r = 0.01·G^0.83 (5-portowe HDPE, N2O; jednostka r nieczytelna – przyjęto mm/s) | 0.5261 mm/s | +15.09 % | — | **INFO** | Średnia czasowo-przestrzenna, ziarno 5-portowe: tylko rząd wielkości. |
 | 8 | ṙ preset HRAP vs Moon 2019 przy G_o = 300 | PE/N2O, wieloportowe | 1.138 mm/s | Moon et al., Aerospace 2019, 6, 28, doi:10.3390/aerospace6030028, Eq. (1): r = 0.01·G^0.83 (5-portowe HDPE, N2O; jednostka r nieczytelna – przyjęto mm/s) | 0.7744 mm/s | -31.93 % | — | **INFO** | Średnia czasowo-przestrzenna, ziarno 5-portowe: tylko rząd wielkości. |
 | 9 | Wykładnik n: preset vs literatura N2O/HDPE | PE/N2O | 0.331 | Doran et al., AIAA JPC 2007 (n = 0.331, G 50–300 kg/m²s) – cytowane przez Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s) | 0.352 | +6.34 % | — | **INFO** | Preset (0.352) bliski Doranowi; Kamps: 0.62 (endpoint) / 0.76 (history). Rozrzut n to główna niepewność sizingu – zmierzyć w kilku punktach G_ox. |
-| 10 | η_c* domyślne vs zmierzone dla N2O/HDPE | SizingOptions.eta_cstar = 0.95 | 0.94 | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Conclusions: ustalone η* 87–94 % | 0.95 | +1.06 % | — | **INFO** | Domyślne 0.95 jest powyżej górnej granicy zmierzonej przez Kampsa (87–94 %). |
+| 10 | η_c* domyślne (sizing) w zakresie zmierzonym dla N2O/HDPE | SizingOptions.eta_cstar | 0.94 | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Conclusions: ustalone η* 87–94 % | 0.9 | -0.04 | — | **PASS** | Kryterium: wartość w przedziale 0.87–0.94 (kolumna Referencja = górna granica). Do v0.2 domyślne było 0.95. |
 | 11 | ṙ preset vs HDPE/LOX (Waxman) przy G = 100 | inny utleniacz – tylko skala | 0.4066 mm/s | B. S. Waxman, PhD thesis, Stanford Univ., Table 1.1 (p. 9, za jego ref. [12]); ṙ w mm/s, G w kg/m²s | 0.5261 mm/s | +29.37 % | — | **INFO** |  |
 | 12 | a „parafiny” w presecie HRAP (Paraffin.mat) | HRAP: [0.0304, 0.681] | 3.043e-05 | B. S. Waxman, PhD thesis, Stanford Univ., Table 1.1 (p. 9, za jego ref. [12]); ṙ w mm/s, G w kg/m²s: HTPB/LOX 3.043e-2 mm/s, n 0.681 | 3.04e-05 | -0.10 % | ±0.1 % | **PASS** | Preset HRAP „Paraffin” = HTPB/LOX z tabeli Waxmana. Parafina nie jest paliwem projektu. |
 | 13 | Konwencja jednostek a | HRAP propellant_template.m | 0.000104 | HRAP propellant_template.m: ṙ mm/s, G kg/m²s, L m | 0.000104 | +0.00 % | ±0.01 % | **PASS** | a_SI = a_HRAP·1e-3 (sprawdzone też w pkt 1 na CSV HRAP). |
-| 14 | pe_05kN z prawem Kamps history (2.52e-5, 0.76): It / O/F_iw / F_iw | examples/pe_05kN.yaml, ta sama geometria | 3714.5 Ns | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s); HyProp z presetem HRAP | 3610.6 Ns | -2.80 % | — | **INFO** | O/F_iw 6.09 → 3.08; F_iw 445 → 438 N. Geometria dobrana pod preset; z prawem z literatury silnik jest bogatszy w paliwo. |
-| 15 | pe_05kN z prawem Kamps endpoint (4.36e-5, 0.62): It / O/F_iw / F_iw | examples/pe_05kN.yaml, ta sama geometria | 3714.5 Ns | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s); HyProp z presetem HRAP | 3622.9 Ns | -2.47 % | — | **INFO** | O/F_iw 6.09 → 3.56; F_iw 445 → 436 N. Geometria dobrana pod preset; z prawem z literatury silnik jest bogatszy w paliwo. |
+| 14 | pe_05kN z prawem Kamps history (2.52e-5, 0.76): It / O/F_iw / F_iw | examples/pe_05kN.yaml, ta sama geometria | 3500.9 Ns | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s); HyProp z presetem HRAP | 3404.0 Ns | -2.77 % | — | **INFO** | O/F_iw 6.24 → 3.10; F_iw 435 → 427 N. Geometria dobrana pod preset; z prawem z literatury silnik jest bogatszy w paliwo. |
+| 15 | pe_05kN z prawem Kamps endpoint (4.36e-5, 0.62): It / O/F_iw / F_iw | examples/pe_05kN.yaml, ta sama geometria | 3500.9 Ns | Kamps et al., Aerospace 2019, 6, 45, doi:10.3390/aerospace6040045, Sec. 3.2.1, Fig. 9 (ṙ w m/s; G_ox 50–100 kg/m²s); HyProp z presetem HRAP | 3418.6 Ns | -2.35 % | — | **INFO** | O/F_iw 6.24 → 3.60; F_iw 435 → 427 N. Geometria dobrana pod preset; z prawem z literatury silnik jest bogatszy w paliwo. |
 
 ## 8. Zbieżność numeryczna
 
@@ -270,16 +270,16 @@ Podsumowanie: INFO: 3, PASS: 7
 
 | # | Wielkość | Przypadek | Referencja | Źródło referencji | HyProp | Odchyłka | Tolerancja | Status | Komentarz |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | Rząd zbieżności w dt: It | examples/pe_05kN.yaml | — |  | 1.016 | — | — | **INFO** | Ekstrapolacja Richardsona q* = 3713.93 Ns; błędy: dt=0.04: +0.059 %, dt=0.02: +0.030 %, dt=0.01: +0.015 %, dt=0.005: +0.007 %, dt=0.0025: +0.004 % |
-| 2 | It przy domyślnym dt = 0.01 s vs q* (Richardson) | examples/pe_05kN.yaml | 3713.9 Ns | ekstrapolacja Richardsona z dt = 0.01/0.005/0.0025 s (samozbieżność) | 3714.5 Ns | +0.01 % | ±0.1 % | **PASS** | Schemat jawny Eulera: rząd 1. dt = 0.01 s daje błąd ~0.015 % It; sizing (dt 0.02 s) ~0.03 %. |
-| 3 | Rząd zbieżności w dt: LRO | examples/pe_05kN.yaml | — |  | 1 | — | — | **INFO** | Ekstrapolacja Richardsona q* = 7.36 s; błędy: dt=0.04: -0.543 %, dt=0.02: -0.272 %, dt=0.01: -0.136 %, dt=0.005: -0.068 %, dt=0.0025: -0.034 % |
-| 4 | LRO przy domyślnym dt = 0.01 s vs q* (Richardson) | examples/pe_05kN.yaml | 7.36 s | ekstrapolacja Richardsona z dt = 0.01/0.005/0.0025 s (samozbieżność) | 7.35 s | -0.14 % | ±0.136005 % | **PASS** | LRO jest kwantowane krokiem dt (zdarzenie na siatce czasu): tolerancja = 1 krok. |
-| 5 | Rząd zbieżności w dt: Pc_liq | examples/pe_05kN.yaml | — |  | 0.998 | — | — | **INFO** | Ekstrapolacja Richardsona q* = 3.26806e+06 Pa; błędy: dt=0.04: +0.036 %, dt=0.02: +0.018 %, dt=0.01: +0.009 %, dt=0.005: +0.004 %, dt=0.0025: +0.002 % |
-| 6 | Pc_liq przy domyślnym dt = 0.01 s vs q* (Richardson) | examples/pe_05kN.yaml | 3.268e+06 Pa | ekstrapolacja Richardsona z dt = 0.01/0.005/0.0025 s (samozbieżność) | 3.268e+06 Pa | +0.01 % | ±0.1 % | **PASS** | Schemat jawny Eulera: rząd 1. dt = 0.01 s daje błąd ~0.015 % It; sizing (dt 0.02 s) ~0.03 %. |
-| 7 | It przy tolerancji Pc = 0.001 | examples/pe_05kN.yaml, dt = 0.01 s | 3714.5 Ns | ten sam przypadek, tolerancja domyślna 1e-4 | 3714.4 Ns | -0.00 % | ±0.05 % | **PASS** |  |
-| 8 | It przy tolerancji Pc = 0.0001 | examples/pe_05kN.yaml, dt = 0.01 s | 3714.5 Ns | ten sam przypadek, tolerancja domyślna 1e-4 | 3714.5 Ns | +0.00 % | ±0.05 % | **PASS** |  |
-| 9 | It przy tolerancji Pc = 1e-05 | examples/pe_05kN.yaml, dt = 0.01 s | 3714.5 Ns | ten sam przypadek, tolerancja domyślna 1e-4 | 3714.5 Ns | +0.00 % | ±0.05 % | **PASS** |  |
-| 10 | It przy tolerancji Pc = 1e-06 | examples/pe_05kN.yaml, dt = 0.01 s | 3714.5 Ns | ten sam przypadek, tolerancja domyślna 1e-4 | 3714.5 Ns | +0.00 % | ±0.05 % | **PASS** |  |
+| 1 | Rząd zbieżności w dt: It | examples/pe_05kN.yaml | — |  | 1.015 | — | — | **INFO** | Ekstrapolacja Richardsona q* = 3499.85 Ns; błędy: dt=0.04: +0.075 %, dt=0.02: +0.044 %, dt=0.01: +0.029 %, dt=0.005: +0.014 %, dt=0.0025: +0.007 % |
+| 2 | It przy domyślnym dt = 0.01 s vs q* (Richardson) | examples/pe_05kN.yaml | 3499.8 Ns | ekstrapolacja Richardsona z dt = 0.01/0.005/0.0025 s (samozbieżność) | 3500.9 Ns | +0.03 % | ±0.1 % | **PASS** | Schemat jawny Eulera: rząd 1. dt = 0.01 s daje błąd ~0.015 % It; sizing (dt 0.02 s) ~0.03 %. |
+| 3 | Rząd zbieżności w dt: LRO | examples/pe_05kN.yaml | — |  | -4.606 | — | — | **INFO** | Ekstrapolacja Richardsona q* = 7.11 s; błędy: dt=0.04: -0.422 %, dt=0.02: -0.141 %, dt=0.01: -0.000 %, dt=0.005: -0.000 %, dt=0.0025: -0.000 % |
+| 4 | LRO przy domyślnym dt = 0.01 s vs q* (Richardson) | examples/pe_05kN.yaml | 7.11 s | ekstrapolacja Richardsona z dt = 0.01/0.005/0.0025 s (samozbieżność) | 7.11 s | -0.00 % | ±0.140788 % | **PASS** | LRO jest kwantowane krokiem dt (zdarzenie na siatce czasu): tolerancja = 1 krok. |
+| 5 | Rząd zbieżności w dt: Pc_liq | examples/pe_05kN.yaml | — |  | 1.003 | — | — | **INFO** | Ekstrapolacja Richardsona q* = 3.19796e+06 Pa; błędy: dt=0.04: +0.017 %, dt=0.02: -0.001 %, dt=0.01: -0.010 %, dt=0.005: -0.005 %, dt=0.0025: -0.003 % |
+| 6 | Pc_liq przy domyślnym dt = 0.01 s vs q* (Richardson) | examples/pe_05kN.yaml | 3.198e+06 Pa | ekstrapolacja Richardsona z dt = 0.01/0.005/0.0025 s (samozbieżność) | 3.198e+06 Pa | -0.01 % | ±0.1 % | **PASS** | Schemat jawny Eulera: rząd 1. dt = 0.01 s daje błąd ~0.015 % It; sizing (dt 0.02 s) ~0.03 %. |
+| 7 | It przy tolerancji Pc = 0.001 | examples/pe_05kN.yaml, dt = 0.01 s | 3500.9 Ns | ten sam przypadek, tolerancja domyślna 1e-4 | 3500.9 Ns | +0.00 % | ±0.05 % | **PASS** |  |
+| 8 | It przy tolerancji Pc = 0.0001 | examples/pe_05kN.yaml, dt = 0.01 s | 3500.9 Ns | ten sam przypadek, tolerancja domyślna 1e-4 | 3500.9 Ns | +0.00 % | ±0.05 % | **PASS** |  |
+| 9 | It przy tolerancji Pc = 1e-05 | examples/pe_05kN.yaml, dt = 0.01 s | 3500.9 Ns | ten sam przypadek, tolerancja domyślna 1e-4 | 3500.9 Ns | +0.00 % | ±0.05 % | **PASS** |  |
+| 10 | It przy tolerancji Pc = 1e-06 | examples/pe_05kN.yaml, dt = 0.01 s | 3500.9 Ns | ten sam przypadek, tolerancja domyślna 1e-4 | 3500.9 Ns | +0.00 % | ±0.05 % | **PASS** |  |
 
 ## 9. Analiza wymiarowa
 
@@ -303,7 +303,7 @@ Podsumowanie: PASS: 10
 Bilans masy utleniacza i paliwa, impuls = ∫F dt, port tylko rośnie, Pc między otoczeniem a zbiornikiem, brak NaN/ujemnych mas, niezależność od jednostek wejścia.
 
 ```
-3 passed in 23.51s
+3 passed in 29.37s
 ```
 ## 2. Ustalenia etapu 1 (pkt 0–1) i ich los
 
