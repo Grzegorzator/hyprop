@@ -93,3 +93,16 @@ def test_nozzle_eps_from_cea_matches_equilibrium_expansion():
     r = cea.query(6.5, 35e5, nz.expansion_ratio)
     assert r.equilibrium.exit_state.pressure_pa == pytest.approx(101325.0, rel=1e-3)
     assert nz.expansion_ratio == pytest.approx(5.14, abs=0.02)
+
+
+def test_inverse_sizing_does_not_mutate_options(monkeypatch):
+    """The refinement loop used to rescale opts.orifice_diameter_m in place,
+    so re-using one SizingOptions object gave a different second design."""
+    monkeypatch.setattr(solver_module, "_build_cea_table", lambda config, eps: _StubCEA())
+    from hyprop.sizing import size_engine
+    from hyprop.sizing.preliminary import SizingOptions
+
+    opts = SizingOptions(nozzle_from_cea=False, of_design=6.97)
+    before = dict(vars(opts))
+    size_engine(thrust_n=500.0, total_impulse_ns=4000.0, apogee_m=3000.0, options=opts)
+    assert vars(opts) == before

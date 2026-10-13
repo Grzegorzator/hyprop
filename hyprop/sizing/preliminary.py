@@ -177,7 +177,8 @@ def size_engine(
         FILL_FRACTION * rho_l + (1 - FILL_FRACTION) * esdu.rho_vapor(temperature_k)
     )
     dp = max(p_tank - opts.pc_design_pa, DP_OVER_PC * opts.pc_design_pa)
-    orifice_area = math.pi * (0.5 * opts.orifice_diameter_m) ** 2
+    orifice_d = opts.orifice_diameter_m  # local: never mutate the caller's options
+    orifice_area = math.pi * (0.5 * orifice_d) ** 2
     n_orifices = max(
         round(mdot_ox / (opts.injector_cd * orifice_area * math.sqrt(2.0 * rho_l * dp))), 1
     )
@@ -227,7 +228,7 @@ def size_engine(
                     model="spi",
                     discharge_coefficient=opts.injector_cd,
                     orifice_count=int(n_orifices),
-                    orifice_diameter_m=opts.orifice_diameter_m,
+                    orifice_diameter_m=orifice_d,
                 ),
                 nozzle=dict(
                     throat_diameter_m=nozzle.throat_diameter_m,
@@ -271,7 +272,7 @@ def size_engine(
         # (continuous, via orifice diameter); the throat then re-sizes
         # at the new impulse-weighted point to hold the design Pc.
         factor_f = thrust_n / max(f_iw, 1.0)
-        opts.orifice_diameter_m *= math.sqrt(factor_f)
+        orifice_d *= math.sqrt(factor_f)
         grain_length *= factor_f ** (1.0 - regression.n)  # keep O/F
         m_ox *= factor_f / (1.0 + err_it)
         tank_volume *= factor_f / (1.0 + err_it)
