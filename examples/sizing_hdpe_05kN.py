@@ -13,6 +13,7 @@ print(f"It={s['total_impulse_ns']:.0f} Ns (liquid {_trapz(h['thrust'][liq], h['t
 print(f"F_peak={s['peak_thrust_n']:.0f} N, F_mean_liq={h['thrust'][liq].mean():.0f} N")
 print(f"Pc_peak={s['peak_pc_pa']/1e5:.1f} bar, LRO={lro:.2f} s, Isp={s['isp_mean_s']:.0f} s")
 
+import os; os.makedirs("outputs", exist_ok=True)
 import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 df = h.to_dataframe()
 fig, ax = plt.subplots(2, 3, figsize=(15, 7))
@@ -24,5 +25,5 @@ for a, (col, title, scale) in zip(ax.flat, panels):
     a.axvline(lro, ls='--', c='r', alpha=0.6)
     a.set_title(title); a.grid(alpha=0.3); a.set_xlabel("t [s]")
 fig.suptitle("HDPE/N2O 0.5 kN preliminary sizing (red: LRO)")
-fig.tight_layout(); fig.savefig("examples/sizing_hdpe_05kN.png", dpi=110)
-print("Saved examples/sizing_hdpe_05kN.png")
+fig.tight_layout(); fig.savefig("outputs/sizing_hdpe_05kN.png", dpi=110)
+print("Saved outputs/sizing_hdpe_05kN.png")
