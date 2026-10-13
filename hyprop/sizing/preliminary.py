@@ -56,6 +56,8 @@ ISP_ESTIMATE_S = 210.0  # first-guess delivered Isp
 #: gamma for the ideal-gas eps estimate used only to locate the optimum O/F
 GAMMA_EPS_ESTIMATE = 1.22
 WEB_MARGIN = 1.25  # OD sized for 25% web reserve
+#: nozzle adaptation altitude when neither design altitude nor apogee is given
+DEFAULT_DESIGN_ALTITUDE_M = 0.0
 FILL_FRACTION = 0.85  # tank liquid volume fill at loading
 
 
@@ -125,7 +127,7 @@ class SizingResult:
 def size_engine(
     thrust_n: float,
     total_impulse_ns: float,
-    apogee_m: float,
+    apogee_m: float | None = None,
     fuel: str = "ldpe",
     oxidizer: str = "n2o",
     temperature_k: float = 293.15,
@@ -133,7 +135,7 @@ def size_engine(
     options: SizingOptions | None = None,
     _runner=None,
 ) -> SizingResult:
-    """Size an engine for a mission: (F, It, apogee) -> converged config.
+    """Size an engine for a mission: (F, It) -> converged config.
 
     Analytic first guess, then a transient-simulation loop that rescales
     oxidizer load, injector, grain and throat until the impulse-weighted
@@ -142,11 +144,14 @@ def size_engine(
     Args:
         thrust_n: Required impulse-weighted thrust [N].
         total_impulse_ns: Required total impulse [N*s].
-        apogee_m: Target apogee [m].
+        apogee_m: Target apogee [m], optional. Used only for the default
+            nozzle design altitude (apogee/3) and recorded in the config.
         fuel: Fuel database key (default LDPE).
         oxidizer: Oxidizer database key.
         temperature_k: Initial tank temperature [K].
-        design_altitude_m: Nozzle adaptation altitude [m]; default apogee/3.
+        design_altitude_m: Nozzle adaptation altitude (p_e = p_a) [m].
+            Takes precedence over ``apogee_m``; if neither is given the
+            nozzle is adapted at sea level (0 m ISA).
         options: Sizing assumptions; defaults to :class:`SizingOptions`.
 
     Returns:
@@ -159,11 +164,13 @@ def size_engine(
     fuel_data = load_fuel(fuel)
     rho_fuel = fuel_data.density.value
     regression = fuel_data.regression_for(oxidizer)[0]
-    h_design = (
-        design_altitude_m
-        if design_altitude_m is not None
-        else design_altitude_from_apogee(apogee_m)
-    )
+    if design_altitude_m is not None:
+        h_design = design_altitude_m
+    elif apogee_m is not None:
+        h_design = design_altitude_from_apogee(apogee_m)
+    else:
+        h_design = DEFAULT_DESIGN_ALTITUDE_M
+    _log.info("Nozzle design altitude: %.0f m", h_design)
 
     from hyprop.cea import get_backend
     from hyprop.oppoints.design_points import OperatingPoint

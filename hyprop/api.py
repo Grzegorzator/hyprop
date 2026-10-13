@@ -117,14 +117,17 @@ def run_batch(
     return _run_batch(config, cases, progress=progress)
 
 
-def size(thrust_n: float, total_impulse_ns: float, apogee_m: float, **kwargs: Any) -> SizingResult:
+def size(
+    thrust_n: float, total_impulse_ns: float, apogee_m: float | None = None, **kwargs: Any
+) -> SizingResult:
     """Inverse design: mission requirements -> converged engine.
 
     Args:
         thrust_n: Required impulse-weighted thrust [N].
         total_impulse_ns: Required total impulse [N*s].
-        apogee_m: Target apogee [m]; sets the nozzle design altitude
-            (apogee/3) unless ``design_altitude_m`` is given.
+        apogee_m: Target apogee [m], optional; sets the nozzle design
+            altitude to apogee/3 unless ``design_altitude_m`` is given.
+            Without either, the nozzle is adapted at sea level.
         **kwargs: Passed to :func:`hyprop.sizing.size_engine` (``fuel``,
             ``oxidizer``, ``temperature_k``, ``design_altitude_m``,
             ``options``).

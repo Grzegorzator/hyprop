@@ -140,3 +140,27 @@ def test_optimal_of_pe_n2o_matches_nasa_cea():
     cea = CanteraBackend(fuel="ldpe", oxidizer="n2o")
     of = optimal_of(cea, 32e5, 5.31, atmosphere.pressure(1000.0), grid_step=0.5)
     assert of == pytest.approx(7.93, abs=0.1)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected_h"),
+    [
+        ({}, 0.0),  # neither: sea level
+        ({"apogee_m": 3000.0}, 1000.0),  # apogee/3 heuristic
+        ({"apogee_m": 3000.0, "design_altitude_m": 250.0}, 250.0),  # explicit wins
+    ],
+)
+def test_design_altitude_inputs(monkeypatch, kwargs, expected_h):
+    monkeypatch.setattr(solver_module, "_build_cea_table", lambda config, eps: _StubCEA())
+    from hyprop.sizing import size_engine
+    from hyprop.sizing.preliminary import SizingOptions
+
+    sized = size_engine(
+        thrust_n=500.0,
+        total_impulse_ns=4000.0,
+        options=SizingOptions(nozzle_from_cea=False, of_design=6.97, max_iterations=2),
+        **kwargs,
+    )
+    assert sized.nozzle.design_altitude_m == pytest.approx(expected_h)
+    assert sized.config.mission.design_altitude_m == pytest.approx(expected_h)
+    assert sized.config.mission.apogee_m == kwargs.get("apogee_m")
