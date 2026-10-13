@@ -38,6 +38,9 @@ include = ["hyprop*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "slow: long-running tests (golden references); deselect with -m 'not slow'",
+]
 filterwarnings = [
     # GRI-Mech NASA polynomials are fitted to 3000 K; hybrid chamber
     # equilibria (~3300 K) extrapolate them marginally (cross-checked

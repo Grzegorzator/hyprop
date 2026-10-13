@@ -80,6 +80,14 @@ Reproduced with `python -m validation.run_all`.
 * **Regression coefficients** match HRAP `.mat` files (HDPE 0.104/0.352,
   paraffin 0.0304/0.681, HTPB 0.198/0.325, mm/s convention).
 
+## Golden tests
+
+`tests/test_golden.py` freezes three reference cases (`tests/golden/*.json`:
+pe_05kN transient, HRAP prusak_v2 configuration, 3 km sizing) so that
+refactoring cannot move the numbers unnoticed. Tolerances and the procedure
+for accepting intended changes: [`tests/golden/README.md`](tests/golden/README.md).
+`pytest -m "not slow"` skips them (~1.5 min).
+
 ## Examples (Cantera backend)
 
 | Script | Result |
