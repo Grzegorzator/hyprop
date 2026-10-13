@@ -79,6 +79,24 @@ warnings.filterwarnings(
     "ignore", message=".*outside valid range.*", category=UserWarning)
 
 
+def carbon_to_oxygen_ratio(fuel: FuelData, oxidizer: OxidizerData, of: float) -> float:
+    """Atomic C/O ratio of the propellant mixture at mixture ratio ``of``.
+
+    For C/O >= 1 oxygen cannot convert all carbon to CO and NASA CEA
+    predicts condensed carbon C(gr) (e.g. ~1 mol-% for PE/N2O at O/F 3).
+    GRI-Mech 3.0 has no condensed phase, so the Cantera backend is only
+    valid for C/O < 1 (docs/VALIDATION.md, thermochemistry grid).
+    """
+    def moles(data, element: str) -> float:
+        comp = getattr(data, "composition", None) or data.formula
+        molar_mass = sum(_ATOMIC_MASS_KG_KMOL[el] * n for el, n in comp.items())
+        return comp.get(element, 0.0) / molar_mass        # kmol element per kg
+
+    carbon = moles(fuel, "C") + of * moles(oxidizer, "C")
+    oxygen = moles(fuel, "O") + of * moles(oxidizer, "O")
+    return float("inf") if oxygen <= 0.0 else carbon / oxygen
+
+
 @register_model("cea", "cantera")
 class CanteraBackend(ThermochemistryBackend):
     """Shifting-equilibrium / frozen expansion computed with Cantera."""
@@ -113,6 +131,7 @@ class CanteraBackend(ThermochemistryBackend):
                 "(J/mol per formula unit) required by the Cantera backend."
             )
         self._gas = self._build_solution(mechanism)
+        self._warned_carbon = False
 
     # ------------------------------------------------------------- build
     def _build_solution(self, mechanism: str):
@@ -143,6 +162,14 @@ class CanteraBackend(ThermochemistryBackend):
     def query(self, of: float, pc: float, eps: float) -> CEAResult:
         if of <= 0 or pc <= 0 or eps <= 1.0:
             raise ValueError("Require of > 0, pc > 0, eps > 1.")
+        if (not self._warned_carbon
+                and carbon_to_oxygen_ratio(self.fuel, self.oxidizer, of) >= 1.0):
+            self._warned_carbon = True
+            _log.warning(
+                "Cantera backend queried at O/F=%.2f with atomic C/O >= 1: "
+                "condensed carbon is not modelled (gri30); Tc/Te errors of "
+                "1-4 %% vs NASA CEA. Use the RocketCEA backend for fuel-rich "
+                "points.", of)
         gas = self._gas
 
         # --- chamber: HP equilibrium at reactant reference state --------
@@ -152,6 +179,7 @@ class CanteraBackend(ThermochemistryBackend):
             {_FUEL_SPECIES_NAME: 1.0 / (1.0 + of),
              self._ox_species: of / (1.0 + of)},
         )
+        self._check_condensed_carbon(of)
         gas.equilibrate("HP")
         chamber = self._station(gas, equilibrium=True)
         h_c = gas.enthalpy_mass
@@ -185,6 +213,25 @@ class CanteraBackend(ThermochemistryBackend):
         )
 
     # ----------------------------------------------------------- helpers
+    def _check_condensed_carbon(self, of: float) -> None:
+        """Warn (once per backend) when elemental C/O > 1.
+
+        GRI-Mech 3.0 has no condensed phase, while the true equilibrium of
+        a C/H/O/N mixture with C/O > 1 contains solid carbon (NASA CEA
+        gives C(gr)). For PE/N2O this is O/F < ~3.3; vs NASA CEA, Tc is
+        then off by up to ~1.4 % and c* by ~0.6 % at O/F 3
+        (docs/VALIDATION.md, item 2). Use RocketCEA for such points.
+        """
+        gas = self._gas
+        c_to_o = gas.elemental_mole_fraction("C") / max(
+            gas.elemental_mole_fraction("O"), 1e-30)
+        if c_to_o > 1.0 and not getattr(self, "_warned_carbon", False):
+            self._warned_carbon = True
+            _log.warning(
+                "Cantera backend: C/O = %.2f > 1 at O/F = %.2f - equilibrium "
+                "should contain condensed carbon, which gri30 lacks; results "
+                "are biased (use RocketCEA for fuel-rich points).", c_to_o, of)
+
     def _station(self, gas, equilibrium: bool = False) -> StationState:
         return StationState(
             temperature_k=gas.T,

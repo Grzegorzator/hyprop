@@ -134,3 +134,16 @@ def test_pe_n2o_matches_nasa_cea():
     assert r.cstar_m_s == pytest.approx(1615.8, rel=2e-3)
     assert r.chamber.gamma_eq == pytest.approx(1.1672, rel=2e-3)
     assert r.chamber.gamma == pytest.approx(1.2471, rel=2e-3)
+
+
+def test_carbon_to_oxygen_validity_flag():
+    """Cantera (gri30) has no C(gr): flag C/O >= 1. PE/N2O: C/O = 1 at
+    O/F ~3.14 (NASA CEA shows C(gr) at O/F 3, not at 3.2)."""
+    from hyprop.cea.cantera_backend import carbon_to_oxygen_ratio
+    from hyprop.data import load_fuel, load_oxidizer
+
+    pe, n2o = load_fuel("ldpe"), load_oxidizer("n2o")
+    assert carbon_to_oxygen_ratio(pe, n2o, 3.0) > 1.0
+    assert carbon_to_oxygen_ratio(pe, n2o, 3.2) < 1.0
+    assert carbon_to_oxygen_ratio(pe, n2o, 3.0) == pytest.approx(
+        (1 / 14.0266e-3) / (3.0 / 44.0128e-3), rel=1e-3)
