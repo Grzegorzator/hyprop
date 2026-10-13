@@ -87,7 +87,7 @@ class CanteraBackend(ThermochemistryBackend):
 
     def __init__(
         self,
-        fuel: Union[str, FuelData] = "paraffin",
+        fuel: Union[str, FuelData] = "ldpe",
         oxidizer: Union[str, OxidizerData] = "n2o",
         mechanism: str = "gri30.yaml",
     ) -> None:

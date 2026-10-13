@@ -6,13 +6,13 @@ import hyprop.api as api
 from hyprop.export import export_result, generate_report
 from hyprop.oppoints import analyze
 
-config = api.load_config("examples/hdpe_05kN_3km_sized.yaml")
+config = api.load_config("examples/pe_05kN_3km_sized.yaml")
 result = api.run(config)
 rop = analyze(result)
 
-files = export_result(result, "outputs/hdpe_05kN_3km", config=config,
-                      rop=rop, stem="hdpe_05kN_3km")
+files = export_result(result, "outputs/pe_05kN_3km", config=config,
+                      rop=rop, stem="pe_05kN_3km")
 report = generate_report(config, result, rop,
-                         "outputs/hdpe_05kN_3km/report_hdpe_05kN_3km")
+                         "outputs/pe_05kN_3km/report_pe_05kN_3km")
 print("Exported:", *(f.name for f in files))
 print("Report  :", report)

@@ -1,10 +1,10 @@
-"""ROP analysis of the 0.5 kN HDPE/N2O engine (E7 demo)."""
+"""ROP analysis of the 0.5 kN PE/N2O engine (E7 demo)."""
 import sys; sys.path.insert(0, '.')
 import numpy as np
 import hyprop.api as api
 from hyprop.oppoints import analyze
 
-result = api.run(api.load_config("examples/hdpe_05kN.yaml"))
+result = api.run(api.load_config("examples/pe_05kN.yaml"))
 report = analyze(result)
 
 iw, ta = report.point("impulse_weighted").values, report.time_average
@@ -50,5 +50,5 @@ for frac in (0.5, 0.9, 0.99):
                    textcoords="offset points", xytext=(6,-4), fontsize=8)
 ax[1].set_title("Cumulative impulse [Ns]"); ax[1].grid(alpha=0.3)
 for a in ax: a.set_xlabel("t [s]")
-fig.tight_layout(); fig.savefig("outputs/rop_hdpe_05kN.png", dpi=110)
-print("Saved outputs/rop_hdpe_05kN.png")
+fig.tight_layout(); fig.savefig("outputs/rop_pe_05kN.png", dpi=110)
+print("Saved outputs/rop_pe_05kN.png")

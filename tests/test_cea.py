@@ -117,3 +117,20 @@ def test_backends_agree_on_both_gammas():
     assert a.chamber.gamma == pytest.approx(b.chamber.gamma, rel=2e-3)
     assert a.chamber.gamma_eq == pytest.approx(b.chamber.gamma_eq, rel=2e-3)
     assert a.cstar_m_s == pytest.approx(b.cstar_m_s, rel=5e-3)
+
+
+def test_pe_n2o_matches_nasa_cea():
+    """PE (ldpe, dHf Splitstone & Johnson 1974) / N2O, O/F 6.5, 35 bar.
+
+    Reference: NASA CEA Python package `cea` 3.3.4, reactant '(CH2)x(cr)'
+    with the chamber enthalpy built from HyProp's dHf (same problem), see
+    validation/readme_claims.py::pe_thermochemistry. Values: Tc 3276.2 K,
+    c* 1615.8 m/s, gamma_s 1.1672, frozen gamma 1.2471.
+    """
+    from hyprop.cea.cantera_backend import CanteraBackend
+
+    r = CanteraBackend(fuel="ldpe", oxidizer="n2o").query(6.5, 35e5, 5.0)
+    assert r.chamber.temperature_k == pytest.approx(3276.2, rel=2e-3)
+    assert r.cstar_m_s == pytest.approx(1615.8, rel=2e-3)
+    assert r.chamber.gamma_eq == pytest.approx(1.1672, rel=2e-3)
+    assert r.chamber.gamma == pytest.approx(1.2471, rel=2e-3)

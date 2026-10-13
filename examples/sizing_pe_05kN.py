@@ -1,4 +1,4 @@
-"""Preliminary sizing run: HDPE/N2O, 0.5 kN, Itot ~ 4000 Ns (E6 demo)."""
+"""Preliminary sizing run: PE (LDPE)/N2O, 0.5 kN, Itot ~ 4000 Ns (E6 demo)."""
 import sys; sys.path.insert(0, '.')
 import numpy as np
 #: NumPy 2.x renamed trapz -> trapezoid; support both.
@@ -6,7 +6,7 @@ _trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
 
 import hyprop.api as api
 
-result = api.run(api.load_config("examples/hdpe_05kN.yaml"))
+result = api.run(api.load_config("examples/pe_05kN.yaml"))
 h, s = result.history, result.summary
 lro = result.event_time("liquid_runout"); liq = h["t"] <= lro
 print(f"It={s['total_impulse_ns']:.0f} Ns (liquid {_trapz(h['thrust'][liq], h['t'][liq]):.0f})")
@@ -24,6 +24,6 @@ for a, (col, title, scale) in zip(ax.flat, panels):
     a.plot(df.t, df[col] / scale, 'b-')
     a.axvline(lro, ls='--', c='r', alpha=0.6)
     a.set_title(title); a.grid(alpha=0.3); a.set_xlabel("t [s]")
-fig.suptitle("HDPE/N2O 0.5 kN preliminary sizing (red: LRO)")
-fig.tight_layout(); fig.savefig("outputs/sizing_hdpe_05kN.png", dpi=110)
-print("Saved outputs/sizing_hdpe_05kN.png")
+fig.suptitle("PE/N2O 0.5 kN preliminary sizing (red: LRO)")
+fig.tight_layout(); fig.savefig("outputs/sizing_pe_05kN.png", dpi=110)
+print("Saved outputs/sizing_pe_05kN.png")

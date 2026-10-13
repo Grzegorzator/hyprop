@@ -1,10 +1,10 @@
-"""1-DOF vertical trajectory check for the sized 0.5 kN HDPE engine.
+"""1-DOF vertical trajectory check for the sized 0.5 kN PE engine.
 
 Rocket assumptions (TO BE CONFIRMED by the user; scaled from the user's
 06_hybrid_solver 1 kN design): m_dry = 9.0 kg (structure + avionics +
 payload + dry engine + tank), D_ref = 0.10 m, Cd = 0.55 (constant).
 Drag: D = 0.5 * rho_ISA(h) * v^2 * Cd * A_ref. Thrust/mdot from the
-transient simulation of examples/hdpe_05kN_3km_sized.yaml.
+transient simulation of examples/pe_05kN_3km_sized.yaml.
 """
 import sys; sys.path.insert(0, '.')
 import numpy as np
@@ -17,7 +17,7 @@ from hyprop.physics import atmosphere
 M_DRY, D_REF, CD = 7.0, 0.10, 0.55   # m_dry: bottom-up estimate 6.25 kg + margin
 A_REF = np.pi * (D_REF / 2) ** 2
 
-result = api.run(api.load_config("examples/hdpe_05kN_3km_sized.yaml"))
+result = api.run(api.load_config("examples/pe_05kN_3km_sized.yaml"))
 h = result.history
 t_burn, F_t = h["t"], h["thrust"]
 m_prop_t = h["m_ox"] + h["m_fuel"]        # remaining propellant mass

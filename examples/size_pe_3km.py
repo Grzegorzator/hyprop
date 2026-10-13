@@ -1,4 +1,4 @@
-"""Inverse sizing demo (E8): HDPE/N2O, F=0.5 kN, It=4000 Ns, apogee 3 km.
+"""Inverse sizing demo (E8): PE (LDPE)/N2O, F=0.5 kN, It=4000 Ns, apogee 3 km.
 
 Launch at 0 m ASL; nozzle adapted at the h=apogee/3 heuristic (1000 m)
 until the trajectory module provides the impulse-weighted altitude.
@@ -12,7 +12,7 @@ from hyprop.sizing.preliminary import SizingOptions
 # Cantera pinned for reproducibility across machines (RocketCEA needs a
 # Fortran compiler; the two agree to 0.15 %, docs/VALIDATION.md).
 sized = api.size(thrust_n=500.0, total_impulse_ns=4000.0, apogee_m=3000.0,
-                 fuel="hdpe", oxidizer="n2o",
+                 fuel="ldpe", oxidizer="n2o",
                  options=SizingOptions(cea_backend="cantera"))
 cfg, nz, ach = sized.config, sized.nozzle, sized.achieved
 print(f"Converged in {sized.iterations} iterations; warnings: {sized.warnings or 'none'}")
@@ -27,5 +27,5 @@ print(f"Nozzle: Dt={nz.throat_diameter_m*1e3:.1f} mm, eps={nz.expansion_ratio:.2
       f"De={nz.exit_diameter_m*1e3:.1f} mm, adapted @ {nz.design_altitude_m:.0f} m "
       f"(pe={nz.exit_pressure_pa/1e3:.1f} kPa), Cf_design={nz.cf_design:.3f}, "
       f"Cf_SL={nz.cf_sea_level:.3f}, separation_risk={nz.separation_risk}")
-api.save_config(cfg, "examples/hdpe_05kN_3km_sized.yaml")
-print("Saved examples/hdpe_05kN_3km_sized.yaml")
+api.save_config(cfg, "examples/pe_05kN_3km_sized.yaml")
+print("Saved examples/pe_05kN_3km_sized.yaml")

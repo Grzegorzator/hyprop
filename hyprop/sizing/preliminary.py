@@ -86,14 +86,14 @@ def size_engine(
     thrust_n: float,
     total_impulse_ns: float,
     apogee_m: float,
-    fuel: str = "hdpe",
+    fuel: str = "ldpe",
     oxidizer: str = "n2o",
     temperature_k: float = 293.15,
     design_altitude_m: Optional[float] = None,
     options: Optional[SizingOptions] = None,
     _runner=None,
 ) -> SizingResult:
-    """Mission (F, It, apogee) -> converged EngineConfig (HDPE/N2O path)."""
+    """Mission (F, It, apogee) -> converged EngineConfig (PE/N2O by default)."""
     import hyprop.api as api
 
     opts = options or SizingOptions()

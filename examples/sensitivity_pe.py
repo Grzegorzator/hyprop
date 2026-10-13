@@ -1,4 +1,4 @@
-"""OAT sensitivity of the sized 0.5 kN HDPE engine (E9 demo).
+"""OAT sensitivity of the sized 0.5 kN PE engine (E9 demo).
 
 Regression coefficients pinned explicitly (database values) so they can
 be perturbed via config paths.
@@ -10,7 +10,7 @@ import hyprop.api as api
 from hyprop.analysis import oat_sensitivity, regime_flags
 from hyprop.batch import apply_overrides
 
-base = api.load_config("examples/hdpe_05kN_3km_sized.yaml")
+base = api.load_config("examples/pe_05kN_3km_sized.yaml")
 base = apply_overrides(base, {"simulation.dt_s": 0.04})
 raw = base.model_dump(mode="python")
 raw["fuel"]["regression"] = dict(model="power_law", a=1.04e-4, n=0.352,

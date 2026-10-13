@@ -1,9 +1,7 @@
-# HDPE/N2O 0.5 kN - preliminary sizing (E6, 2026-07-16)
-# Targets: F_mean ~500 N (liquid phase), Itot ~4000 Ns
-# Result:  It=3942 Ns (3643 liquid), F_mean_liq=494 N, Pc_peak=36.9 bar,
-#          LRO=7.38 s, O/F 5.4-7.2, Isp_mean=206 s, m_fuel_used=0.35 kg
+# PE/N2O 0.5 kN - preliminary sizing example (MELprop LDPE granulate).
+# Targets: F ~500 N (liquid phase), Itot ~4000 Ns. Results: see README.
 version: "0.1"
-name: hdpe_05kN
+name: pe_05kN
 mission:
   thrust_n: 500.0
   total_impulse_ns: 4000.0
@@ -11,7 +9,7 @@ mission:
   ambient_pressure_pa: 101325.0
   safety_factor: 1.5
 oxidizer: {name: n2o, temperature_k: 293.15}
-fuel: {name: hdpe, density_kg_m3: 920.0}
+fuel: {name: ldpe}                # MELprop LDPE/LLDPE granulate, rho 920 (database)
 grain:
   geometry: cylindrical
   length_m: 0.450

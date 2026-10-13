@@ -138,7 +138,7 @@ class FuelSpec(_Model):
     """Fuel selection, with optional overrides of database values."""
 
     name: str = Field(
-        ..., description="Database name (htpb, paraffin, hdpe, abs, pmma) or 'custom'"
+        ..., description="Database name (ldpe, hdpe, paraffin, htpb, abs, pmma) or 'custom'"
     )
     density_kg_m3: Optional[QuantityField] = Field(
         None, description="Override of fuel density [kg/m^3]"
