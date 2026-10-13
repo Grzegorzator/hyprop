@@ -1,0 +1,42 @@
+# Low-density / linear-low-density polyethylene (LDPE/LLDPE), monomer C2H4
+# KNN MELprop fuel: TotalEnergies natural PE granulate (~3-5 mm), 25 kg on hand.
+schema: fuel/1
+name: ldpe
+display_name: "LDPE/LLDPE (MELprop granulate)"
+density:
+  value: 920.0            # [kg/m^3]
+  source: >-
+    Team's estimate for the TotalEnergies LDPE/LLDPE granulate (typical
+    datasheet range 0.915-0.935 g/cm^3). MEASURE the cast/pressed grain density.
+  verify: true
+composition:              # per monomer unit
+  C: 2
+  H: 4
+composition_source: "Polyethylene repeat unit (C2H4)n"
+enthalpy_of_formation:        # [J/mol] per C2H4
+  value: -56.364e+03
+  source: >-
+    Splitstone & Johnson, J. Res. NBS 78A(5), 611-616 (1974),
+    doi:10.6028/jres.078A.038: -28.182 kJ/mol CH2 for linear PE at 72 %
+    crystallinity (lowest crystallinity measured). LDPE is less crystalline
+    (~40-50 %); the two NBS points (72 %, 96 %) give -3.7 kJ/mol CH2 per unit
+    crystallinity, i.e. an LDPE value ~1 kJ/mol CH2 less negative - an
+    extrapolation, not a measurement (effect on Tc ~3 K).
+  verify: true
+regression:
+  - oxidizer: n2o
+    model: power_law
+    a: 1.04e-4            # HRAP HDPE preset 0.104 mm/s -> SI
+    n: 0.352
+    m: 0.0
+    flux_basis: oxidizer
+    source: >-
+      Borrowed from the HRAP HDPE preset (HDPE.mat prop_Reg = [0.104, 0.352, 0],
+      mm/s convention per propellant_template.m). No LDPE-specific data:
+      regression of the team's PE must be measured in the fire test
+      (several G_ox points).
+    verify: true
+notes: >
+  Fuel of the prusak_v2 / MELprop hybrid. Thermochemistry identical to HDPE
+  (same C2H4 unit, Hf within ~1 kJ/mol CH2); differences are density and
+  regression rate.

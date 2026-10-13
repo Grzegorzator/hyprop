@@ -91,3 +91,59 @@ def test_cache_hits(backend):
     assert a is b
     assert cached.hits == 1 and cached.misses == 1
     assert len(cached) == 1
+
+
+def test_gamma_definitions_frozen_and_equilibrium():
+    """B3: StationState.gamma is frozen cp/cv, gamma_eq is CEA's GAMMAs.
+
+    Reference values: NASA CEA via RocketCEA for C32H66/N2O at the same
+    point (gamma_fr 1.2472, gamma_s 1.1669) - see docs/VALIDATION.md.
+    """
+    from hyprop.cea.cantera_backend import CanteraBackend
+
+    r = CanteraBackend(fuel="paraffin", oxidizer="n2o").query(6.5, 35e5, 5.0)
+    assert r.chamber.gamma == pytest.approx(1.2472, abs=2e-3)
+    assert r.chamber.gamma_eq == pytest.approx(1.1669, abs=2e-3)
+    assert r.frozen.exit_state.gamma_eq is None
+
+
+def test_backends_agree_on_both_gammas():
+    pytest.importorskip("rocketcea")
+    from hyprop.cea.cantera_backend import CanteraBackend
+    from hyprop.cea.rocketcea_backend import RocketCEABackend
+
+    a = CanteraBackend(fuel="hdpe", oxidizer="n2o").query(6.0, 30e5, 5.0)
+    b = RocketCEABackend(fuel="hdpe", oxidizer="n2o").query(6.0, 30e5, 5.0)
+    assert a.chamber.gamma == pytest.approx(b.chamber.gamma, rel=2e-3)
+    assert a.chamber.gamma_eq == pytest.approx(b.chamber.gamma_eq, rel=2e-3)
+    assert a.cstar_m_s == pytest.approx(b.cstar_m_s, rel=5e-3)
+
+
+def test_pe_n2o_matches_nasa_cea():
+    """PE (ldpe, dHf Splitstone & Johnson 1974) / N2O, O/F 6.5, 35 bar.
+
+    Reference: NASA CEA Python package `cea` 3.3.4, reactant '(CH2)x(cr)'
+    with the chamber enthalpy built from HyProp's dHf (same problem), see
+    validation/readme_claims.py::pe_thermochemistry. Values: Tc 3276.2 K,
+    c* 1615.8 m/s, gamma_s 1.1672, frozen gamma 1.2471.
+    """
+    from hyprop.cea.cantera_backend import CanteraBackend
+
+    r = CanteraBackend(fuel="ldpe", oxidizer="n2o").query(6.5, 35e5, 5.0)
+    assert r.chamber.temperature_k == pytest.approx(3276.2, rel=2e-3)
+    assert r.cstar_m_s == pytest.approx(1615.8, rel=2e-3)
+    assert r.chamber.gamma_eq == pytest.approx(1.1672, rel=2e-3)
+    assert r.chamber.gamma == pytest.approx(1.2471, rel=2e-3)
+
+
+def test_carbon_to_oxygen_validity_flag():
+    """Cantera (gri30) has no C(gr): flag C/O >= 1. PE/N2O: C/O = 1 at
+    O/F ~3.14 (NASA CEA shows C(gr) at O/F 3, not at 3.2)."""
+    from hyprop.cea.cantera_backend import carbon_to_oxygen_ratio
+    from hyprop.data import load_fuel, load_oxidizer
+
+    pe, n2o = load_fuel("ldpe"), load_oxidizer("n2o")
+    assert carbon_to_oxygen_ratio(pe, n2o, 3.0) > 1.0
+    assert carbon_to_oxygen_ratio(pe, n2o, 3.2) < 1.0
+    assert carbon_to_oxygen_ratio(pe, n2o, 3.0) == pytest.approx(
+        (1 / 14.0266e-3) / (3.0 / 44.0128e-3), rel=1e-3)

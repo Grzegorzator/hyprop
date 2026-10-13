@@ -3,8 +3,10 @@
 Inputs come exclusively from an ROP operating point (ARCHITECTURE.md
 principle 8), by default the impulse-weighted point:
 
-* throat: At = F / (Cf * Pc)  ->  mdot = Pc*At*Cd/c*   (Sutton Eq. 3-31)
-* expansion: eps such that pe = pa(design altitude)     (optimum, Eq. 3-25)
+* throat: At = F / (eta*Cd*Cf_i,lambda * Pc), lambda on the momentum
+  term of Cf only                                      (Sutton Eqs. 3-31, 3-34)
+* expansion: eps such that pe = pa(design altitude)     (optimum, Eq. 3-25),
+  from the CEA shifting-equilibrium expansion when a backend is given
 * exit diameter, delivered Cf with divergence loss.
 
 Design altitude for an ascent 0 -> apogee: a single fixed nozzle cannot
@@ -18,16 +20,23 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Optional
+
+from scipy.optimize import brentq
 
 from hyprop.core.logging import get_logger
 from hyprop.nozzle.losses import divergence_efficiency
 from hyprop.oppoints.design_points import OperatingPoint
+from hyprop.performance.metrics import ideal_effective_exhaust_velocity
 from hyprop.physics import atmosphere
 from hyprop.physics.compressible import (
     exit_pressure_ratio,
     optimum_expansion_ratio,
     thrust_coefficient,
 )
+
+if TYPE_CHECKING:
+    from hyprop.cea.backend import ThermochemistryBackend
 
 _log = get_logger(__name__)
 
@@ -60,44 +69,81 @@ def size_nozzle(
     thrust_target_n: float,
     design_altitude_m: float,
     half_angle_deg: float = 15.0,
+    efficiency: float = 1.0,
+    discharge_coefficient: float = 1.0,
+    cea: Optional["ThermochemistryBackend"] = None,
 ) -> NozzleDesign:
     """Size throat and expansion for a target thrust at the ROP point.
 
     Parameters
     ----------
     point:
-        ROP operating point providing ``pc`` [Pa] and ``gamma`` [-]
-        (impulse-weighted point recommended).
+        ROP operating point providing ``pc`` [Pa], ``of`` [-] and
+        ``gamma`` [-] (frozen cp/cv; impulse-weighted point recommended).
     thrust_target_n:
         Thrust to deliver at the design point [N].
     design_altitude_m:
         Altitude of pressure adaptation (pe = pa there) [m].
+    efficiency, discharge_coefficient:
+        Same meaning as ``nozzle.efficiency`` / ``nozzle.discharge_coefficient``
+        in the transient, so that the sized throat delivers the target
+        thrust at the design Pc: F = eta*Cd*Cf_i,lambda*Pc*At (the c*
+        efficiency cancels at fixed Pc, Sutton 9th ed. Eqs. 3-31, 3-40).
+    cea:
+        Thermochemistry backend. When given (and ``point`` has ``of``),
+        eps and Cf_i come from the shifting-equilibrium expansion itself
+        (eps such that CEA p_e = p_a). Otherwise the ideal-gas relations
+        with constant frozen gamma are used, which misplace eps_opt by
+        ~3 % (frozen gamma) to ~10 % (equilibrium gamma) for hybrid
+        exhaust at 35 bar (docs/VALIDATION.md).
     """
     pc = point["pc"]
-    gamma = point["gamma"]
     pa_design = atmosphere.pressure(design_altitude_m)
-
-    eps = optimum_expansion_ratio(pc / pa_design, gamma)
-    pe_over_pc = exit_pressure_ratio(eps, gamma)
+    pa_sl = atmosphere.pressure(0.0)
     lam = divergence_efficiency(half_angle_deg)
+    use_cea = cea is not None and "of" in point.values
 
-    cf_design = lam * thrust_coefficient(
-        gamma, eps, pe_over_pc, pa_design / pc
-    )
-    throat_area = thrust_target_n / (cf_design * pc)
+    if use_cea:
+        of = point["of"]
+
+        def pe_of(eps_try: float) -> float:
+            return cea.query(of, pc, eps_try).equilibrium.exit_state.pressure_pa
+
+        eps = brentq(lambda e: pe_of(e) - pa_design, 1.2, 80.0, xtol=1e-5)
+        r = cea.query(of, pc, eps)
+        pe = r.equilibrium.exit_state.pressure_pa
+
+        def cf_ideal(pa: float) -> float:
+            c_i = ideal_effective_exhaust_velocity(
+                r.equilibrium.exhaust_velocity_m_s, pe, pa, eps,
+                r.cstar_m_s, pc, lam)
+            return c_i / r.cstar_m_s
+        cf_i_design, cf_i_sl = cf_ideal(pa_design), cf_ideal(pa_sl)
+    else:
+        gamma = point["gamma"]
+        eps = optimum_expansion_ratio(pc / pa_design, gamma)
+        pe_over_pc = exit_pressure_ratio(eps, gamma)
+        pe = pe_over_pc * pc
+        cf_momentum = thrust_coefficient(gamma, eps, pe_over_pc, pe_over_pc)
+
+        def cf_ideal(pa: float) -> float:
+            return lam * cf_momentum + (pe_over_pc - pa / pc) * eps
+        cf_i_design, cf_i_sl = cf_ideal(pa_design), cf_ideal(pa_sl)
+
+    # lambda is already inside cf_i (momentum term only, Sutton Eq. 3-34)
+    cf_design = efficiency * cf_i_design
+    cf_sl = efficiency * cf_i_sl
+    throat_area = thrust_target_n / (cf_design * discharge_coefficient * pc)
     throat_d = 2.0 * math.sqrt(throat_area / math.pi)
     exit_d = throat_d * math.sqrt(eps)
-
-    pa_sl = atmosphere.pressure(0.0)
-    cf_sl = lam * thrust_coefficient(gamma, eps, pe_over_pc, pa_sl / pc)
-    pe = pe_over_pc * pc
     separation = pe < 0.4 * pa_sl        # Summerfield criterion
 
     _log.info(
-        "Nozzle: Dt=%.1f mm, eps=%.2f, De=%.1f mm, pe=%.0f Pa "
+        "Nozzle (%s): Dt=%.2f mm, eps=%.3f, De=%.1f mm, pe=%.0f Pa "
         "(h_d=%.0f m), Cf=%.3f (SL %.3f)%s",
-        throat_d * 1e3, eps, exit_d * 1e3, pe, design_altitude_m,
-        cf_design, cf_sl, " SEPARATION RISK" if separation else "",
+        "CEA" if use_cea else "ideal gas", throat_d * 1e3, eps,
+        exit_d * 1e3, pe, design_altitude_m, cf_design, cf_sl,
+        " SEPARATION RISK" if separation else "",
     )
     return NozzleDesign(
         throat_diameter_m=throat_d, exit_diameter_m=exit_d,

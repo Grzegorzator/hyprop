@@ -33,6 +33,45 @@ def thrust(
     return momentum + (exit_pressure_pa - ambient_pressure_pa) * exit_area_m2
 
 
+def ideal_effective_exhaust_velocity(
+    exhaust_velocity_m_s: float,
+    exit_pressure_pa: float,
+    ambient_pressure_pa: float,
+    expansion_ratio: float,
+    cstar_ideal_m_s: float,
+    pc_pa: float,
+    divergence: float = 1.0,
+) -> float:
+    """Ideal effective exhaust velocity c_i [m/s] at the operating ambient.
+
+    c_i = lambda * v_e + (p_e - p_a) * A_e / mdot_i,
+    A_e/mdot_i = eps*c*_i/p_c (ideal mass flow mdot_i = p_c*A_t/c*_i;
+    Sutton & Biblarz 9th ed., Eqs. 2-16, 3-24, 3-32: c = c* C_F).
+    The conical divergence factor ``lambda`` multiplies the momentum term
+    only, not the pressure term (Sutton Eq. 3-34 and the note below it).
+    """
+    return divergence * exhaust_velocity_m_s + (
+        exit_pressure_pa - ambient_pressure_pa
+    ) * expansion_ratio * cstar_ideal_m_s / pc_pa
+
+
+def delivered_thrust(
+    mdot_kg_s: float,
+    c_ideal_m_s: float,
+    zeta_cstar: float,
+    zeta_cf: float,
+) -> float:
+    """Delivered thrust [N] from correction factors (Sutton convention).
+
+    F_a = mdot_a * c_a,  c_a = zeta_v * c_i,  zeta_v = zeta_c* * zeta_CF
+    (Sutton & Biblarz, Rocket Propulsion Elements, 9th ed., Sec. 3.5
+    "Performance Correction Factors", Eqs. 3-40 and 3-41; worked in
+    Example 3-7). zeta_c* is the combustion (c*) efficiency, zeta_CF the
+    nozzle (thrust-coefficient) efficiency including divergence.
+    """
+    return zeta_cstar * zeta_cf * mdot_kg_s * c_ideal_m_s
+
+
 def specific_impulse(thrust_n: float, mdot_kg_s: float) -> float:
     """Specific impulse Isp [s] = F / (mdot * g0)."""
     if mdot_kg_s <= 0.0:

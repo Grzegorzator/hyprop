@@ -36,16 +36,21 @@ CFG = dict(
                 discharge_coefficient=0.98),
     #   ^ HRAP noz_eff=0.95 is total; our lambda(15deg)=0.983 * 0.9673 = 0.95
     efficiencies=dict(eta_cstar=0.95),
-    simulation=dict(dt_s=0.01, t_max_s=30.0, pc_solver="fixed_point"),
+    simulation=dict(dt_s=0.01, t_max_s=30.0, pc_solver="fixed_point",
+                    cea_backend="cantera"),
 )
 
 def main():
     config = EngineConfig.from_dict(CFG)
     result = api.run(config)
     df = result.history.to_dataframe()
-    ref = pd.read_csv(
-        "/sessions/festive-nice-darwin/mnt/HRAP/application/output/"
-        "prusakv2_HRAP_output.csv")
+    import os
+    hrap_dir = os.environ.get("HYPROP_HRAP_DIR")
+    if not hrap_dir:
+        sys.exit("Set HYPROP_HRAP_DIR to the HRAP 'application' folder "
+                 "(contains output/prusakv2_HRAP_output.csv).")
+    ref = pd.read_csv(os.path.join(hrap_dir, "output",
+                                   "prusakv2_HRAP_output.csv"))
     ref.columns = [c.strip() for c in ref.columns]
 
     # --- compare on common time base (liquid phase + tail) --------------
@@ -105,8 +110,9 @@ def main():
     for a in ax.flat: a.grid(alpha=0.3)
     fig.suptitle("HyProp vs HRAP - prusak_v2 (HDPE/N2O)")
     fig.tight_layout()
-    fig.savefig("examples/benchmark_prusak_v2.png", dpi=110)
-    print("Saved examples/benchmark_prusak_v2.png")
+    os.makedirs("outputs", exist_ok=True)
+    fig.savefig("outputs/benchmark_prusak_v2.png", dpi=110)
+    print("Saved outputs/benchmark_prusak_v2.png")
 
 if __name__ == "__main__":
     main()

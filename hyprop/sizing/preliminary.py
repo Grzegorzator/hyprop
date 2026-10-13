@@ -13,7 +13,7 @@ Algorithm
       - injector area to keep the design mdot_ox,
       - throat area by F_target/F_iw at fixed Pc,
       - nozzle eps re-adapted to the design altitude each pass.
-   Repeats until F_iw and It are within tolerance (default 3%).
+   Repeats until F_iw and It are within tolerance (default 1%).
 
 Stability guards baked in (reported, not silently fixed): initial
 oxidizer flux G_ox0 <= 500 kg/m^2/s (flooding), injector dP/Pc >= 0.20
@@ -62,10 +62,13 @@ class SizingOptions:
     g_ox0: float = 400.0                    # initial port flux [kg/m^2/s]
     injector_cd: float = 0.60
     orifice_diameter_m: float = 1.5e-3
-    eta_cstar: float = 0.95
+    eta_cstar: float = 0.90                 # N2O/HDPE measured 0.87-0.94 (Kamps et al. 2019)
     nozzle_efficiency: float = 0.9673       # with lambda(15deg) -> 0.95 total
-    max_iterations: int = 10
-    tolerance: float = 0.03
+    nozzle_cd: float = 0.98                 # throat discharge coefficient
+    cea_backend: str = "auto"               # thermochemistry for nozzle + transient
+    nozzle_from_cea: bool = True            # eps/Cf from CEA expansion (else ideal gas)
+    max_iterations: int = 20
+    tolerance: float = 0.01                 # on F_iw and It
 
 
 @dataclass
@@ -83,14 +86,14 @@ def size_engine(
     thrust_n: float,
     total_impulse_ns: float,
     apogee_m: float,
-    fuel: str = "hdpe",
+    fuel: str = "ldpe",
     oxidizer: str = "n2o",
     temperature_k: float = 293.15,
     design_altitude_m: Optional[float] = None,
     options: Optional[SizingOptions] = None,
     _runner=None,
 ) -> SizingResult:
-    """Mission (F, It, apogee) -> converged EngineConfig (HDPE/N2O path)."""
+    """Mission (F, It, apogee) -> converged EngineConfig (PE/N2O by default)."""
     import hyprop.api as api
 
     opts = options or SizingOptions()
@@ -130,9 +133,14 @@ def size_engine(
 
     # placeholder ROP-like point for the very first nozzle sizing
     from hyprop.oppoints.design_points import OperatingPoint
+    from hyprop.cea import get_backend
+    cea = (get_backend(opts.cea_backend, fuel=fuel, oxidizer=oxidizer)
+           if opts.nozzle_from_cea else None)
+    nozzle_kw = dict(efficiency=opts.nozzle_efficiency,
+                     discharge_coefficient=opts.nozzle_cd, cea=cea)
     seed_point = OperatingPoint(
-        "seed", {"pc": opts.pc_design_pa, "gamma": 1.25})
-    nozzle = size_nozzle(seed_point, thrust_n, h_design)
+        "seed", {"pc": opts.pc_design_pa, "of": of_design, "gamma": 1.25})
+    nozzle = size_nozzle(seed_point, thrust_n, h_design, **nozzle_kw)
 
     warnings: List[str] = []
     achieved: Dict[str, float] = {}
@@ -161,9 +169,10 @@ def size_engine(
                         expansion_ratio=nozzle.expansion_ratio,
                         divergence_half_angle_deg=15.0,
                         efficiency=opts.nozzle_efficiency,
-                        discharge_coefficient=0.98),
+                        discharge_coefficient=opts.nozzle_cd),
             efficiencies=dict(eta_cstar=opts.eta_cstar),
-            simulation=dict(dt_s=0.02, t_max_s=60.0),
+            simulation=dict(dt_s=0.02, t_max_s=60.0,
+                            cea_backend=opts.cea_backend),
         ))
         result = run(config)
         report = analyze(result)
@@ -194,8 +203,9 @@ def size_engine(
         # sizing it at the drifting Pc_iw creates positive feedback
         # (higher mdot -> higher Pc -> smaller throat -> flooding).
         design_point = OperatingPoint(
-            "design", {"pc": opts.pc_design_pa, "gamma": iw["gamma"]})
-        nozzle = size_nozzle(design_point, thrust_n, h_design)
+            "design", {"pc": opts.pc_design_pa, "of": iw["of"],
+                       "gamma": iw["gamma"]})
+        nozzle = size_nozzle(design_point, thrust_n, h_design, **nozzle_kw)
         g0_actual = result.history["g_flux"][0]
         if g0_actual > G_OX0_MAX:
             port_d *= math.sqrt(g0_actual / opts.g_ox0)

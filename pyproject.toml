@@ -27,11 +27,8 @@ cantera = ["cantera>=3.0"]
 props = ["CoolProp>=6.6"]
 opt = ["pymoo>=0.6", "SALib>=1.4"]
 export = ["openpyxl>=3.1", "jinja2>=3.1.2"]
-gui = ["PySide6>=6.6"]
-dev = ["pytest>=7.4", "pytest-cov"]
-
-[project.scripts]
-hyprop-gui = "hyprop.gui.app:main"
+dev = ["pytest>=7.4", "pytest-cov", "hypothesis>=6.0"]
+validation = ["cea>=3.3; python_version >= '3.11'"]
 
 [tool.setuptools.packages.find]
 include = ["hyprop*"]
@@ -41,3 +38,12 @@ include = ["hyprop*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "slow: long-running tests (golden references); deselect with -m 'not slow'",
+]
+filterwarnings = [
+    # GRI-Mech NASA polynomials are fitted to 3000 K; hybrid chamber
+    # equilibria (~3300 K) extrapolate them marginally (cross-checked
+    # against NASA CEA to 0.15 %, docs/VALIDATION.md).
+    "ignore:.*outside valid range.*:UserWarning",
+]

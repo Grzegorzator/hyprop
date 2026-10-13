@@ -79,6 +79,24 @@ warnings.filterwarnings(
     "ignore", message=".*outside valid range.*", category=UserWarning)
 
 
+def carbon_to_oxygen_ratio(fuel: FuelData, oxidizer: OxidizerData, of: float) -> float:
+    """Atomic C/O ratio of the propellant mixture at mixture ratio ``of``.
+
+    For C/O >= 1 oxygen cannot convert all carbon to CO and NASA CEA
+    predicts condensed carbon C(gr) (e.g. ~1 mol-% for PE/N2O at O/F 3).
+    GRI-Mech 3.0 has no condensed phase, so the Cantera backend is only
+    valid for C/O < 1 (docs/VALIDATION.md, thermochemistry grid).
+    """
+    def moles(data, element: str) -> float:
+        comp = getattr(data, "composition", None) or data.formula
+        molar_mass = sum(_ATOMIC_MASS_KG_KMOL[el] * n for el, n in comp.items())
+        return comp.get(element, 0.0) / molar_mass        # kmol element per kg
+
+    carbon = moles(fuel, "C") + of * moles(oxidizer, "C")
+    oxygen = moles(fuel, "O") + of * moles(oxidizer, "O")
+    return float("inf") if oxygen <= 0.0 else carbon / oxygen
+
+
 @register_model("cea", "cantera")
 class CanteraBackend(ThermochemistryBackend):
     """Shifting-equilibrium / frozen expansion computed with Cantera."""
@@ -87,7 +105,7 @@ class CanteraBackend(ThermochemistryBackend):
 
     def __init__(
         self,
-        fuel: Union[str, FuelData] = "paraffin",
+        fuel: Union[str, FuelData] = "ldpe",
         oxidizer: Union[str, OxidizerData] = "n2o",
         mechanism: str = "gri30.yaml",
     ) -> None:
@@ -113,6 +131,7 @@ class CanteraBackend(ThermochemistryBackend):
                 "(J/mol per formula unit) required by the Cantera backend."
             )
         self._gas = self._build_solution(mechanism)
+        self._warned_carbon = False
 
     # ------------------------------------------------------------- build
     def _build_solution(self, mechanism: str):
@@ -143,6 +162,14 @@ class CanteraBackend(ThermochemistryBackend):
     def query(self, of: float, pc: float, eps: float) -> CEAResult:
         if of <= 0 or pc <= 0 or eps <= 1.0:
             raise ValueError("Require of > 0, pc > 0, eps > 1.")
+        if (not self._warned_carbon
+                and carbon_to_oxygen_ratio(self.fuel, self.oxidizer, of) >= 1.0):
+            self._warned_carbon = True
+            _log.warning(
+                "Cantera backend queried at O/F=%.2f with atomic C/O >= 1: "
+                "condensed carbon is not modelled (gri30); Tc/Te errors of "
+                "1-4 %% vs NASA CEA. Use the RocketCEA backend for fuel-rich "
+                "points.", of)
         gas = self._gas
 
         # --- chamber: HP equilibrium at reactant reference state --------
@@ -153,7 +180,7 @@ class CanteraBackend(ThermochemistryBackend):
              self._ox_species: of / (1.0 + of)},
         )
         gas.equilibrate("HP")
-        chamber = self._station(gas)
+        chamber = self._station(gas, equilibrium=True)
         h_c = gas.enthalpy_mass
         s_c = gas.entropy_mass
         composition_c = dict(
@@ -185,14 +212,33 @@ class CanteraBackend(ThermochemistryBackend):
         )
 
     # ----------------------------------------------------------- helpers
-    def _station(self, gas) -> StationState:
+    def _station(self, gas, equilibrium: bool = False) -> StationState:
         return StationState(
             temperature_k=gas.T,
             pressure_pa=gas.P,
             gamma=gas.cp / gas.cv,
             molar_mass_kg_mol=gas.mean_molecular_weight / 1000.0,
             cp_j_kg_k=gas.cp,
+            gamma_eq=self._gamma_equilibrium(gas) if equilibrium else None,
         )
+
+    @staticmethod
+    def _gamma_equilibrium(gas, rel_dp: float = 1e-4) -> float:
+        """gamma_s = (d ln p / d ln rho)_s at shifting equilibrium.
+
+        Central difference along the isentrope, composition re-equilibrated
+        at both points (definition of CEA's GAMMAs, NASA RP-1311 Eq. 2.71).
+        The gas object is restored to its original (T, P, X) afterwards.
+        """
+        t0, p0, x0 = gas.T, gas.P, gas.X.copy()
+        s0 = gas.entropy_mass
+        rho = []
+        for factor in (1.0 - rel_dp, 1.0 + rel_dp):
+            gas.SP = s0, p0 * factor
+            gas.equilibrate("SP")
+            rho.append(gas.density)
+        gas.TPX = t0, p0, x0
+        return math.log((1.0 + rel_dp) / (1.0 - rel_dp)) / math.log(rho[1] / rho[0])
 
     def _restore_chamber(self, chamber: StationState, composition) -> None:
         self._gas.TPX = (
@@ -239,7 +285,7 @@ class CanteraBackend(ThermochemistryBackend):
         u_t, _, rho_t = self._flow_state(p_throat, h_c, s_c, frozen, composition)
         g_throat = rho_t * u_t                      # mdot / At [kg/(m^2 s)]
         cstar = pc / g_throat                       # c* = pc*At/mdot
-        return self._station(self._gas), g_throat, cstar
+        return self._station(self._gas, equilibrium=not frozen), g_throat, cstar
 
     def _solve_exit(
         self, h_c: float, s_c: float, pc: float, eps: float, g_throat: float,
@@ -270,4 +316,4 @@ class CanteraBackend(ThermochemistryBackend):
                     f"Exit area-ratio eps={eps} not bracketed."
                 ) from exc
         ve, _, _ = self._flow_state(p_exit, h_c, s_c, frozen, composition)
-        return self._station(self._gas), ve
+        return self._station(self._gas, equilibrium=not frozen), ve

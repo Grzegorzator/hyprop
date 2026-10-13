@@ -7,12 +7,13 @@ fixed eps, then bilinear interpolation (``RegularGridInterpolator``) of
 every scalar the solver needs. Speed-up vs direct Cantera queries:
 ~1000x per time step.
 
-Interpolated scalars: cstar, chamber T/gamma/M/cp, exit ve/pe/T for both
+Interpolated scalars: cstar, chamber T/gamma (frozen)/gamma_eq/M/cp, exit ve/pe/T for both
 equilibrium and frozen expansion.
 """
 
 from __future__ import annotations
 
+import math
 from typing import Sequence
 
 import numpy as np
@@ -29,7 +30,7 @@ from hyprop.core.logging import get_logger
 _log = get_logger(__name__)
 
 _FIELDS = (
-    "cstar", "t_c", "gamma_c", "m_c", "cp_c",
+    "cstar", "t_c", "gamma_c", "gamma_eq_c", "m_c", "cp_c",
     "t_t", "p_t", "gamma_t", "m_t",
     "ve_eq", "pe_eq", "te_eq", "gamma_e", "m_e",
     "ve_fr", "pe_fr", "te_fr",
@@ -49,6 +50,8 @@ class TabulatedBackend(ThermochemistryBackend):
         eps: float,
     ) -> None:
         self._eps = eps
+        #: e.g. "tabulated[cantera]" - records the backend behind the table
+        self.name = f"tabulated[{backend.name}]"
         of_grid = np.asarray(of_grid, dtype=float)
         pc_grid = np.asarray(pc_grid, dtype=float)
         tables = {name: np.empty((of_grid.size, pc_grid.size))
@@ -63,6 +66,9 @@ class TabulatedBackend(ThermochemistryBackend):
                 tables["cstar"][i, j] = r.cstar_m_s
                 tables["t_c"][i, j] = r.chamber.temperature_k
                 tables["gamma_c"][i, j] = r.chamber.gamma
+                tables["gamma_eq_c"][i, j] = (r.chamber.gamma_eq
+                                              if r.chamber.gamma_eq is not None
+                                              else np.nan)
                 tables["m_c"][i, j] = r.chamber.molar_mass_kg_mol
                 tables["cp_c"][i, j] = r.chamber.cp_j_kg_k or 0.0
                 tables["t_t"][i, j] = r.throat.temperature_k
@@ -96,8 +102,10 @@ class TabulatedBackend(ThermochemistryBackend):
         point = np.array([[of, pc]])
         value = {name: float(self._interp[name](point)[0])
                  for name in _FIELDS}
+        gamma_eq_c = value["gamma_eq_c"]
         chamber = StationState(value["t_c"], pc, value["gamma_c"],
-                               value["m_c"], value["cp_c"] or None)
+                               value["m_c"], value["cp_c"] or None,
+                               gamma_eq=None if math.isnan(gamma_eq_c) else gamma_eq_c)
         throat = StationState(value["t_t"], value["p_t"],
                               value["gamma_t"], value["m_t"])
         exit_eq = StationState(value["te_eq"], value["pe_eq"],

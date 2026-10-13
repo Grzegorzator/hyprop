@@ -83,3 +83,88 @@ def test_brent_matches_fixed_point(stub_cea):
         r_fp.summary["peak_pc_pa"], rel=0.01)
     assert r_br.summary["total_impulse_ns"] == pytest.approx(
         r_fp.summary["total_impulse_ns"], rel=0.02)
+
+
+def test_cea_table_cache_keys_on_exact_eps():
+    """Regression (B1): two eps values that round to the same 2 decimals
+    must get separate tables (formerly crashed api.size)."""
+    import hyprop.simulation.solver as sm
+    from hyprop.core.config import EngineConfig
+
+    old = sm._TABLE_OF, sm._TABLE_PC
+    sm._TABLE_OF, sm._TABLE_PC = 3, 3
+    try:
+        cfg = EngineConfig.from_dict(dict(
+            mission=dict(thrust_n=500.0, burn_time_s=8.0),
+            oxidizer=dict(name="n2o"), fuel=dict(name="hdpe"),
+            grain=dict(geometry="cylindrical", length_m=0.3,
+                       outer_diameter_m=0.06,
+                       port=dict(initial_diameter_m=0.02)),
+        ))
+        a = sm._build_cea_table(cfg, 5.0209)
+        b = sm._build_cea_table(cfg, 5.0167)
+        assert a is not b
+        b.query(6.0, 30e5, 5.0167)          # must not raise
+    finally:
+        sm._TABLE_OF, sm._TABLE_PC = old
+
+
+def test_cea_backend_setting_is_honoured(monkeypatch):
+    """B2: simulation.cea_backend selects the table backend (was ignored)."""
+    import hyprop.simulation.solver as sm
+    from hyprop.cea.backend import ThermochemistryBackend
+    from hyprop.core.config import EngineConfig
+
+    seen = []
+
+    def fake_get_backend(name, **kwargs):
+        seen.append(name)
+
+        class _B(ThermochemistryBackend):
+            name = "fake"
+
+            def query(self, of, pc, eps):
+                return _StubCEA().query(of, pc, eps)
+        return _B()
+
+    import hyprop.cea as cea_pkg
+    monkeypatch.setattr(cea_pkg, "get_backend", fake_get_backend)
+    sm._TABLE_CACHE.clear()
+    cfg = EngineConfig.from_dict(dict(
+        mission=dict(thrust_n=500.0, burn_time_s=8.0),
+        oxidizer=dict(name="n2o"), fuel=dict(name="hdpe"),
+        grain=dict(geometry="cylindrical", length_m=0.3, outer_diameter_m=0.06,
+                   port=dict(initial_diameter_m=0.02)),
+        simulation=dict(cea_backend="rocketcea"),
+    ))
+    table = sm._build_cea_table(cfg, 5.0)
+    sm._TABLE_CACHE.clear()
+    assert seen == ["rocketcea"]
+    assert table.name == "tabulated[fake]"
+
+
+def test_thrust_uses_sutton_correction_factors(stub_cea):
+    """B4: F = eta_c* * eta_noz * mdot * c_i  (Sutton 9th ed. Eqs. 3-40/41),
+    c_i = lambda*ve + (pe - pa)*eps*c*_i/Pc (lambda on momentum only,
+    Eq. 3-34). Checked step by step."""
+    import numpy as np
+    from hyprop.nozzle.losses import divergence_efficiency
+
+    cfg = EngineConfig.from_dict(CFG)
+    h = solver_module.run_simulation(cfg).history
+    lam = divergence_efficiency(cfg.nozzle.divergence_half_angle_deg)
+    c_i = lam * 2200.0 + (0.4e5 - 101325.0) * 5.3 * 1550.0 / h["pc"]
+    expected = np.maximum(cfg.efficiencies.eta_cstar * cfg.nozzle.efficiency
+                          * h["mdot_total"] * c_i, 0.0)
+    np.testing.assert_allclose(h["thrust"], expected, rtol=1e-12)
+
+
+def test_better_combustion_raises_isp(stub_cea):
+    """B4 regression: with the old formulation dIsp/deta_c* was ~0 and
+    dF/deta_c* < 0. Delivered Isp must scale ~ with eta_c*."""
+    def isp(eta):
+        raw = dict(CFG); raw["efficiencies"] = dict(eta_cstar=eta)
+        return solver_module.run_simulation(
+            EngineConfig.from_dict(raw)).summary["isp_mean_s"]
+    ratio = isp(0.95) / isp(0.85)
+    assert ratio == pytest.approx(0.95 / 0.85, rel=0.03)

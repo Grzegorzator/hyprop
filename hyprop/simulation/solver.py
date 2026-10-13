@@ -12,9 +12,18 @@ Each time step couples five models (ARCHITECTURE.md par. 4):
    where mdot_fuel follows from regression at the current Pc via
    G -> rdot -> mdot_fuel. Solved by damped fixed-point iteration
    (HRAP; user's 06_hybrid_solver, default) or Brent on the residual.
-4. **Thrust** from the tabulated CEA expansion at the current O/F:
+4. **Thrust** from the tabulated CEA expansion at the current O/F and
+   the correction-factor convention of Sutton & Biblarz (9th ed.,
+   Sec. 3.5, Eqs. 3-40/3-41):
 
-       F = eta_noz * mdot * ve + (pe - pa) * Ae
+       c_i = lambda*ve + (pe - pa)*eps*c*_i/Pc   (ideal, at ambient pa)
+       F   = eta_c* * eta_noz * mdot * c_i      (zeta_v = zeta_c* zeta_CF)
+
+   lambda(alpha) = conical divergence factor, momentum term only (Sutton
+   Eq. 3-34); eta_noz = nozzle.efficiency (other nozzle losses, zeta_CF).
+   Before v0.2 the combustion efficiency entered only Pc, not F, so a
+   better combustion lowered thrust (dF/deta_c* < 0) - same as HRAP
+   (Nickel, Eqs. 20-24), whose Ve uses the ideal Tc.
 
 5. **Geometry update**: w += rdot * dt; tank steps by mdot_ox * dt.
 
@@ -35,7 +44,6 @@ from typing import Dict, List, Optional, Tuple
 from scipy.optimize import brentq
 
 from hyprop.cea.backend import ThermochemistryBackend
-from hyprop.cea.cantera_backend import CanteraBackend
 from hyprop.cea.table import TabulatedBackend
 from hyprop.core.config import EngineConfig
 from hyprop.core.constants import G0, P_ATM_SL
@@ -44,6 +52,10 @@ from hyprop.core.logging import get_logger
 from hyprop.core.registry import autodiscover, get_model
 from hyprop.core.state import TimeHistory
 from hyprop.data import load_fuel
+from hyprop.performance.metrics import (
+    delivered_thrust,
+    ideal_effective_exhaust_velocity,
+)
 from hyprop.geometry.base import GrainGeometry
 from hyprop.injector.base import InjectorModel
 from hyprop.regression.power_law import PowerLawRegression
@@ -65,6 +77,7 @@ class SimulationResult:
     history: TimeHistory
     events: List[Tuple[float, str]] = field(default_factory=list)
     summary: Dict[str, float] = field(default_factory=dict)
+    thermo_backend: str = ""        #: e.g. "tabulated[rocketcea]"
 
     def event_time(self, name: str) -> Optional[float]:
         for time_s, event in self.events:
@@ -125,26 +138,36 @@ def _build_components(config: EngineConfig):
     return fuel, fuel_density, geometry, regression, tank, injector
 
 
-#: Process-wide table cache: (fuel, oxidizer, round(eps,2)) -> table.
+#: Process-wide table cache: (backend, fuel, oxidizer, eps, n_of, n_pc) -> table.
+#: eps is keyed at full precision: TabulatedBackend.query rejects any eps
+#: mismatch > 1e-9, so a rounded key (formerly round(eps, 2)) made two
+#: sizing iterations with eps 5.0209 / 5.0167 collide and crash api.size.
 #: Batch/sensitivity runs mutate injector/tank/grain parameters far more
 #: often than propellants or eps; rebuilding the ~20 s Cantera sweep for
 #: every case would dominate runtime.
-_TABLE_CACHE: Dict[Tuple[str, str, float, int, int], TabulatedBackend] = {}
+_TABLE_CACHE: Dict[Tuple[str, str, str, float, int, int], TabulatedBackend] = {}
 
 
 def _build_cea_table(config: EngineConfig, eps: float) -> TabulatedBackend:
-    """Sweep the Cantera backend over an (O/F, Pc) grid (HRAP pattern)."""
-    import numpy as np
+    """Sweep the configured backend over an (O/F, Pc) grid (HRAP pattern).
 
-    key = (config.fuel.name, config.oxidizer.name, round(eps, 2),
+    ``simulation.cea_backend`` selects the backend ('auto' = RocketCEA if
+    installed, else Cantera; see :func:`hyprop.cea.get_backend`).
+    """
+    import numpy as np
+    from hyprop.cea import get_backend
+
+    requested = config.simulation.cea_backend
+    key = (requested, config.fuel.name, config.oxidizer.name, float(eps),
            _TABLE_OF, _TABLE_PC)
     cached = _TABLE_CACHE.get(key)
     if cached is not None:
         return cached
 
-    backend: ThermochemistryBackend = CanteraBackend(
-        fuel=config.fuel.name, oxidizer=config.oxidizer.name
+    backend: ThermochemistryBackend = get_backend(
+        requested, fuel=config.fuel.name, oxidizer=config.oxidizer.name
     )
+    _log.info("CEA table backend: %s (requested '%s')", backend.name, requested)
     # O/F below ~2 (very fuel-rich C/H) destabilises gri30 equilibrium
     # (missing condensed carbon); the transient never goes there anyway.
     of_grid = np.linspace(2.0, 14.0, _TABLE_OF)
@@ -165,14 +188,12 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
         raise ConfigError("nozzle.expansion_ratio is required for E6 runs.")
     throat_area = math.pi * (0.5 * config.nozzle.throat_diameter_m) ** 2
     eps = config.nozzle.expansion_ratio
-    exit_area = throat_area * eps
     ambient = config.mission.ambient_pressure_pa or P_ATM_SL
     eta_cstar = config.efficiencies.eta_cstar
-    from hyprop.nozzle.losses import nozzle_efficiency
+    from hyprop.nozzle.losses import divergence_efficiency
 
-    eta_noz = nozzle_efficiency(
-        config.nozzle.divergence_half_angle_deg, config.nozzle.efficiency
-    )
+    divergence = divergence_efficiency(config.nozzle.divergence_half_angle_deg)
+    eta_noz = config.nozzle.efficiency
     cd_nozzle = config.nozzle.discharge_coefficient   # HRAP noz_Cd
 
     cea = _build_cea_table(config, eps)
@@ -285,11 +306,14 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
                                         cea.pc_range[1]), eps)
         mdot_total = flow["mdot_ox"] + flow["mdot_fuel"]
         exp = cea_point.equilibrium
-        thrust_n = (
-            eta_noz * mdot_total * exp.exhaust_velocity_m_s
-            + (exp.exit_state.pressure_pa - ambient) * exit_area
-        )
-        thrust_n = max(thrust_n, 0.0)
+        pc_query = cea_point.pc_pa
+        # pe scales with Pc at fixed eps; rescale if Pc was clamped to table
+        pe = exp.exit_state.pressure_pa * (pc / pc_query)
+        c_ideal = ideal_effective_exhaust_velocity(
+            exp.exhaust_velocity_m_s, pe, ambient, eps,
+            cea_point.cstar_m_s, pc, divergence)
+        thrust_n = max(delivered_thrust(mdot_total, c_ideal,
+                                        eta_cstar, eta_noz), 0.0)
         impulse += thrust_n * dt
         isp = thrust_n / (mdot_total * G0) if mdot_total > 0 else 0.0
 
@@ -298,7 +322,10 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
             p_tank=tank_state.pressure_pa, of=flow["of"] if
             math.isfinite(flow["of"]) else 0.0,
             isp=isp, cstar=cea_point.cstar_m_s * eta_cstar,
-            gamma=cea_point.chamber.gamma,
+            gamma=cea_point.chamber.gamma,          # frozen cp/cv
+            gamma_eq=(cea_point.chamber.gamma_eq
+                      if cea_point.chamber.gamma_eq is not None
+                      else float("nan")),
             t_c=cea_point.chamber.temperature_k,
             mdot_ox=flow["mdot_ox"], mdot_fuel=flow["mdot_fuel"],
             mdot_total=mdot_total, g_flux=flow["g_flux"],
@@ -320,7 +347,8 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
     else:
         events.append((time_s, "time_budget"))
 
-    result = SimulationResult(history=history, events=events)
+    result = SimulationResult(history=history, events=events,
+                              thermo_backend=getattr(cea, "name", type(cea).__name__))
     if len(history):
         thrust = history["thrust"]
         mdot = history["mdot_total"]

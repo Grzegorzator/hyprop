@@ -1,0 +1,34 @@
+# PE/N2O 0.5 kN - preliminary sizing example (MELprop LDPE granulate).
+# Targets: F ~500 N (liquid phase), Itot ~4000 Ns. Results: see README.
+version: "0.1"
+name: pe_05kN
+mission:
+  thrust_n: 500.0
+  total_impulse_ns: 4000.0
+  burn_time_s: 8.0
+  ambient_pressure_pa: 101325.0
+  safety_factor: 1.5
+oxidizer: {name: n2o, temperature_k: 293.15}
+fuel: {name: ldpe}                # MELprop LDPE/LLDPE granulate, rho 920 (database)
+grain:
+  geometry: cylindrical
+  length_m: 0.450
+  outer_diameter_m: 0.050          # web margin ~5.5 mm at LRO
+  port: {initial_diameter_m: 0.028}
+tank:
+  model: equilibrium_blowdown
+  volume_m3: 2.45e-3               # 2.45 L (fill ~85% at 293 K)
+  oxidizer_mass_kg: 1.62
+injector:
+  model: spi                       # D3; NHNE/HEM available
+  discharge_coefficient: 0.60
+  orifice_count: 5
+  orifice_diameter_m: 1.4e-3
+nozzle:
+  throat_diameter_m: 11.5e-3
+  expansion_ratio: 5.3
+  divergence_half_angle_deg: 15.0
+  efficiency: 0.9673               # total nozzle eff 0.95 with lambda(15deg)
+  discharge_coefficient: 0.98
+efficiencies: {eta_cstar: 0.90}     # Kamps et al. 2019 (N2O/HDPE): 0.87-0.94
+simulation: {dt_s: 0.01, t_max_s: 30.0, pc_solver: fixed_point, cea_backend: cantera}
