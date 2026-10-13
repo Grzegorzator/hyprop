@@ -40,6 +40,7 @@ class OperatingPoint:
     recommended_for: Sequence[str] = field(default_factory=tuple)
 
     def __getitem__(self, channel: str) -> float:
+        """Value of one channel, e.g. ``point["pc"]``."""
         return self.values[channel]
 
 

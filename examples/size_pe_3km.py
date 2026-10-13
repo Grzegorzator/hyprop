@@ -31,8 +31,9 @@ print(
     f"Grain : port {cfg.grain.port['initial_diameter_m'] * 1e3:.1f} -> OD "
     f"{cfg.grain.outer_diameter_m * 1e3:.1f} mm x {cfg.grain.length_m * 1e3:.0f} mm"
 )
-print(f"Tank  : {cfg.tank.volume_m3 * 1e3:.2f} L, {cfg.tank.oxidizer_mass_kg:.2f} kg N2O")
-inj = cfg.injector
+tank, inj = cfg.tank, cfg.injector
+assert tank.volume_m3 is not None and inj.orifice_diameter_m is not None  # set by sizing
+print(f"Tank  : {tank.volume_m3 * 1e3:.2f} L, {tank.oxidizer_mass_kg:.2f} kg N2O")
 print(
     f"Inj   : {inj.orifice_count} x {inj.orifice_diameter_m * 1e3:.2f} mm, "
     f"Cd {inj.discharge_coefficient}"

@@ -62,6 +62,7 @@ class ROPReport:
     recommendations: dict[str, str] = field(default_factory=lambda: dict(RECOMMENDATIONS))
 
     def point(self, name: str) -> OperatingPoint:
+        """Operating point by name (e.g. ``"impulse_weighted"``)."""
         return self.points[name]
 
     def for_module(self, module: str) -> OperatingPoint:
@@ -75,6 +76,7 @@ class ROPReport:
         return pd.DataFrame(rows).T
 
     def phases_table(self) -> pd.DataFrame:
+        """One row per burn phase: times, impulse/time shares, channel means."""
         records = []
         for phase in self.phases:
             row = dict(
@@ -94,7 +96,17 @@ def analyze(
     result,
     percentiles: Sequence[float] = PERCENTILES_DEFAULT,
 ) -> ROPReport:
-    """Build the full ROP analysis from a SimulationResult."""
+    """Build the representative-operating-point (ROP) analysis of a run.
+
+    Args:
+        result: Output of :func:`hyprop.api.run`.
+        percentiles: Impulse percentiles at which to report states [%].
+
+    Returns:
+        Named points (peak, impulse-weighted, heat-load, mass-flow, median
+        impulse), percentile points, burn phases, impulse/time shares and
+        plain time averages.
+    """
     history: TimeHistory = result.history
     lro: float | None = result.event_time("liquid_runout")
 

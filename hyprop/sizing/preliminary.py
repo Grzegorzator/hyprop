@@ -1,7 +1,7 @@
 """Inverse preliminary sizing: mission requirements -> EngineConfig (E8).
 
-Algorithm
----------
+Algorithm:
+
 1. **Analytic first guess** (Sutton/Humble relations at assumed Pc):
    mdot from F/(Isp_est*g0); throat from Cf; oxidizer mass from It;
    port diameter from a max-flux limit G_ox0; grain length from the
@@ -54,7 +54,27 @@ FILL_FRACTION = 0.85  # tank liquid volume fill at loading
 
 @dataclass
 class SizingOptions:
-    """Tunable assumptions of the preliminary sizing."""
+    """Tunable assumptions of the preliminary sizing.
+
+    Attributes:
+        pc_design_pa: Design chamber pressure [Pa].
+        of_design: First-guess design O/F; None uses 0.85 x 8.2 = 6.97
+            (8.2 is a hard-coded optimum O/F, not looked up per propellant).
+        g_ox0: Initial port oxidizer flux [kg/(m^2*s)].
+        injector_cd: Injector orifice discharge coefficient [-].
+        orifice_diameter_m: Injector orifice diameter [m].
+        eta_cstar: Combustion (c*) efficiency [-]; N2O/HDPE measured
+            0.87-0.94 (Kamps et al., Aerospace 2019).
+        nozzle_efficiency: Nozzle efficiency other than divergence [-].
+        nozzle_cd: Throat discharge coefficient [-].
+        cea_backend: Thermochemistry backend (``"auto"``, ``"rocketcea"``,
+            ``"cantera"``) for the nozzle and the transient.
+        nozzle_from_cea: Size eps and Cf from the CEA expansion (else
+            ideal gas with frozen gamma).
+        max_iterations: Limit of the simulation refinement loop.
+        tolerance: Relative tolerance on impulse-weighted thrust and on
+            total impulse.
+    """
 
     pc_design_pa: float = PC_DESIGN_DEFAULT
     of_design: float | None = None  # None -> near optimum - 15%
@@ -72,7 +92,18 @@ class SizingOptions:
 
 @dataclass
 class SizingResult:
-    """Converged sizing output."""
+    """Converged sizing output.
+
+    Attributes:
+        config: Sized engine, ready for :func:`hyprop.api.run`.
+        nozzle: Nozzle design at the final design point.
+        achieved: Metrics of the last transient (``thrust_iw_n``,
+            ``total_impulse_ns``, ``pc_iw_pa``, ``of_iw``, ``isp_iw_s``,
+            ``lro_s``, ...).
+        warnings: Guard messages (flooding, feed coupling, separation,
+            no convergence).
+        iterations: Refinement iterations used.
+    """
 
     config: EngineConfig
     nozzle: NozzleDesign
@@ -92,7 +123,25 @@ def size_engine(
     options: SizingOptions | None = None,
     _runner=None,
 ) -> SizingResult:
-    """Mission (F, It, apogee) -> converged EngineConfig (PE/N2O by default)."""
+    """Size an engine for a mission: (F, It, apogee) -> converged config.
+
+    Analytic first guess, then a transient-simulation loop that rescales
+    oxidizer load, injector, grain and throat until the impulse-weighted
+    thrust and the total impulse meet the targets (module docstring).
+
+    Args:
+        thrust_n: Required impulse-weighted thrust [N].
+        total_impulse_ns: Required total impulse [N*s].
+        apogee_m: Target apogee [m].
+        fuel: Fuel database key (default LDPE).
+        oxidizer: Oxidizer database key.
+        temperature_k: Initial tank temperature [K].
+        design_altitude_m: Nozzle adaptation altitude [m]; default apogee/3.
+        options: Sizing assumptions; defaults to :class:`SizingOptions`.
+
+    Returns:
+        The converged design; see :class:`SizingResult`.
+    """
     import hyprop.api as api
 
     opts = options or SizingOptions()

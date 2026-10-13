@@ -5,12 +5,11 @@ decorator. The solver and the GUI query the registry instead of importing
 concrete classes, so a new model dropped into the proper package becomes
 available without touching solver code.
 
-Example
--------
->>> @register_model("regression", "power_law")
-... class PowerLawRegression: ...
->>> get_model("regression", "power_law")
-<class 'PowerLawRegression'>
+Example:
+    >>> @register_model("regression", "power_law")
+    ... class PowerLawRegression: ...
+    >>> get_model("regression", "power_law")
+    <class 'PowerLawRegression'>
 
 :func:`autodiscover` imports all model packages so that decorator side
 effects run; call it once at API start-up.
@@ -37,12 +36,9 @@ _REGISTRY: dict[str, dict[str, type]] = defaultdict(dict)
 def register_model(category: str, name: str | None = None):
     """Class decorator registering a model under ``(category, name)``.
 
-    Parameters
-    ----------
-    category:
-        One of :data:`CATEGORIES`.
-    name:
-        Registry key; defaults to the lower-cased class name.
+    Args:
+        category: One of :data:`CATEGORIES`.
+        name: Registry key; defaults to the lower-cased class name.
     """
     if category not in CATEGORIES:
         raise RegistryError(f"Unknown category '{category}'. Valid: {CATEGORIES}.")
@@ -86,7 +82,6 @@ def autodiscover() -> None:
     Importing runs the ``@register_model`` decorators. Missing optional
     packages (not yet implemented stages) are skipped silently.
     """
-
     for pkg_name in CATEGORIES:
         full_name = f"hyprop.{pkg_name}"
         try:

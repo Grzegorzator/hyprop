@@ -78,9 +78,11 @@ class ContourGrain(GrainGeometry):
 
     # ---------------------------------------------------------- interface
     def port_area(self, w: float) -> float:
+        """Total port cross-section area [m^2] after web burn ``w`` [m]."""
         return self._clipped(w).area
 
     def burn_perimeter(self, w: float) -> float:
+        """Burning perimeter [m] after web burn ``w`` [m]."""
         clipped = self._clipped(w)
         if clipped.is_empty:
             return 0.0
@@ -91,6 +93,7 @@ class ContourGrain(GrainGeometry):
         return max(boundary.length - on_wall, 0.0)
 
     def web_remaining(self, w: float) -> float:
+        """Remaining web thickness [m] after web burn ``w`` [m]."""
         # Distance from the current port contour to the bore wall.
         port = self._offset_port(w)
         if port.contains(self._bore):

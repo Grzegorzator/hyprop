@@ -15,13 +15,14 @@ Generalises the user's validated script ``07_cantera_punkt0_termochemia.py``:
 Shifting equilibrium re-equilibrates ('SP') at every station (decision
 D6 default); frozen mode keeps the chamber composition fixed.
 
-Notes
------
-* The surrogate's cp does not influence results because reactants enter
-  exactly at the reference temperature (h(T_ref) = hf identically).
-* Sound speed uses the frozen (cp/cv) gamma also in equilibrium mode -
-  same approximation as the user's script and HRAP tables; the error on
-  c* is well below 1% for these mixtures.
+Note:
+    * The surrogate's cp does not influence results because reactants enter
+      exactly at the reference temperature (h(T_ref) = hf identically).
+    * Sound speed uses the frozen (cp/cv) gamma also in equilibrium mode -
+      same approximation as the user's script and HRAP tables; the error on
+      c* is well below 1% for these mixtures.
+    * GRI-Mech 3.0 has no condensed carbon: results are accurate only for
+      atomic C/O < 1 (a warning is logged otherwise; docs/VALIDATION.md).
 
 Sources: user's 07_cantera scripts; Gordon & McBride NASA RP-1311;
 Goodwin et al., Cantera (https://cantera.org).
@@ -151,6 +152,7 @@ class CanteraBackend(ThermochemistryBackend):
 
     # ------------------------------------------------------------- query
     def query(self, of: float, pc: float, eps: float) -> CEAResult:
+        """Equilibrium chamber and shifting/frozen expansion with Cantera (module docstring)."""
         if of <= 0 or pc <= 0 or eps <= 1.0:
             raise ValueError("Require of > 0, pc > 0, eps > 1.")
         if not self._warned_carbon and carbon_to_oxygen_ratio(self.fuel, self.oxidizer, of) >= 1.0:

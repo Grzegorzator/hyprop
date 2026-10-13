@@ -33,6 +33,7 @@ class Objective:
     direction: str = "max"
 
     def value(self, row: dict[str, float]) -> float:
+        """Objective to minimise for one batch row (negated for ``"max"``)."""
         raw = self.metric(row) if callable(self.metric) else row[self.metric]
         return -raw if self.direction == "max" else raw  # minimise always
 
@@ -49,10 +50,12 @@ class OptimizationProblem:
 
     @property
     def names(self) -> list[str]:
+        """Design-variable config paths."""
         return list(self.variables)
 
     @property
     def bounds(self) -> list[tuple[float, float]]:
+        """(lower, upper) bounds in :attr:`names` order."""
         return [self.variables[n] for n in self.names]
 
     def evaluate(self, x: Sequence[float]) -> tuple[list[float], dict]:

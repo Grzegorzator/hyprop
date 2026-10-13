@@ -41,6 +41,7 @@ class PressureFedTank(TankModel):
         )
 
     def state(self) -> TankState:
+        """Current (constant pressure and temperature) supply state."""
         liquid = self._mass if self._fluid.phase == "liquid" else 0.0
         vapor = self._mass - liquid
         return TankState(
@@ -53,6 +54,7 @@ class PressureFedTank(TankModel):
         )
 
     def step(self, dt: float, mdot_out: float) -> TankState:
+        """Remove ``mdot_out * dt`` [kg] and return the new state."""
         if dt <= 0.0 or mdot_out < 0.0:
             raise ValueError("Require dt > 0 and mdot_out >= 0.")
         self._time += dt

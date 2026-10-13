@@ -32,6 +32,7 @@ class CachedBackend(ThermochemistryBackend):
         self.misses = 0
 
     def query(self, of: float, pc: float, eps: float) -> CEAResult:
+        """Cached query; key rounded to O/F 1e-3, Pc 100 Pa and eps 0.01."""
         key = (round(of, 3), round(pc, -2), round(eps, 2))
         result = self._cache.get(key)
         if result is not None:

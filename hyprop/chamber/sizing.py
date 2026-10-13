@@ -35,7 +35,7 @@ def characteristic_length(volume_m3: float, throat_area_m2: float) -> float:
 
 
 def residence_time(volume_m3: float, point: OperatingPoint, mdot_kg_s: float) -> float:
-    """tau = V_c * rho_c / mdot [s], rho_c from the ROP chamber state."""
+    """Tau = V_c * rho_c / mdot [s], rho_c from the ROP chamber state."""
     rho_c = (
         point["pc"] / (R_UNIVERSAL / 0.0265 * point["t_c"]) if "m_c" not in point.values else None
     )

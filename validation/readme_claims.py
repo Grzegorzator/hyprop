@@ -58,6 +58,7 @@ def hrap_benchmark() -> list[Row]:
     ref = pd.read_csv(csv)
     ref.columns = [c.strip() for c in ref.columns]
     lro = res.event_time("liquid_runout")
+    assert lro is not None, "prusak_v2 must reach liquid run-out"
     tg = np.arange(0.2, min(lro, 7.0), 0.05)  # identical window to benchmark script
 
     def dev(col_h, col_r, scale=1.0):

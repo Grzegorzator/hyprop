@@ -71,7 +71,18 @@ _MIN_PC_FACTOR = 1.10  # stop when Pc < factor * Pa
 
 @dataclass
 class SimulationResult:
-    """Full transient output + events + derived summary."""
+    """Full transient output + events + derived summary.
+
+    Attributes:
+        history: Time series of all state channels (SI units).
+        events: ``(time_s, name)`` pairs; names include ``liquid_runout``,
+            ``oxidizer_depleted``, ``fuel_burnout``, ``pressure_decay`` and
+            ``time_budget``.
+        summary: ``burn_time_s``, ``total_impulse_ns``, ``peak_thrust_n``,
+            ``mean_thrust_n``, ``peak_pc_pa``, ``propellant_used_kg``,
+            ``isp_mean_s`` and further derived metrics.
+        thermo_backend: Thermochemistry used, e.g. ``"tabulated[cantera]"``.
+    """
 
     history: TimeHistory
     events: list[tuple[float, str]] = field(default_factory=list)
@@ -79,6 +90,7 @@ class SimulationResult:
     thermo_backend: str = ""  #: e.g. "tabulated[rocketcea]"
 
     def event_time(self, name: str) -> float | None:
+        """Time [s] of the first event called ``name``, or None."""
         for time_s, event in self.events:
             if event == name:
                 return time_s
@@ -173,7 +185,21 @@ def _build_cea_table(config: EngineConfig, eps: float) -> TabulatedBackend:
 
 
 def run_simulation(config: EngineConfig) -> SimulationResult:
-    """Run the full transient for one :class:`EngineConfig`."""
+    """Run the full transient for one engine (explicit Euler in time).
+
+    Each step: tank blowdown -> injector flow -> chamber pressure from the
+    mass balance (fixed point or Brent) -> regression -> thrust from the
+    tabulated thermochemistry with eta_c* and nozzle efficiencies.
+
+    Args:
+        config: Engine with a defined nozzle.
+
+    Returns:
+        History, events and summary; see :class:`SimulationResult`.
+
+    Raises:
+        ConfigError: If the throat diameter or expansion ratio is missing.
+    """
     (fuel, fuel_density, geometry, regression, tank, injector) = _build_components(config)
 
     if config.nozzle.throat_diameter_m is None:

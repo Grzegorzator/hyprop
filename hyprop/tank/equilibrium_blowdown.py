@@ -88,6 +88,7 @@ class EquilibriumBlowdownTank(TankModel):
 
     # ------------------------------------------------------------ public
     def state(self) -> TankState:
+        """Current tank state (saturated while liquid remains)."""
         if self._m_liq > 0.0:
             pressure = self._props.psat(self._temperature)
             fluid = self._fluid_state(pressure)
@@ -103,6 +104,7 @@ class EquilibriumBlowdownTank(TankModel):
         )
 
     def step(self, dt: float, mdot_out: float) -> TankState:
+        """Advance by ``dt`` [s] with outflow ``mdot_out`` [kg/s] and return the new state."""
         if dt <= 0.0 or mdot_out < 0.0:
             raise ValueError("Require dt > 0 and mdot_out >= 0.")
         dm = mdot_out * dt

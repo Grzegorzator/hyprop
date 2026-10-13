@@ -112,6 +112,7 @@ class TabulatedBackend(ThermochemistryBackend):
         self.pc_range = (float(pcs[0]), float(pcs[-1]))
 
     def query(self, of: float, pc: float, eps: float) -> CEAResult:
+        """Bilinear interpolation in (O/F, Pc); ``eps`` must equal the table's eps."""
         if abs(eps - self._eps) > 1e-9:
             raise ValueError(f"Table built for eps={self._eps}, queried eps={eps}.")
         point = np.array([[of, pc]])

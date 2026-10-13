@@ -29,15 +29,11 @@ def configure(
 ) -> _logging.Logger:
     """Configure the ``hyprop`` root logger.
 
-    Parameters
-    ----------
-    level:
-        Console verbosity (``"DEBUG" | "INFO" | "WARNING" | "ERROR"``).
-    logfile:
-        Optional path; when given, the complete run (down to ``file_level``)
-        is written there.
-    file_level:
-        Verbosity of the file handler (default ``DEBUG`` = full trace).
+    Args:
+        level: Console verbosity (``"DEBUG" | "INFO" | "WARNING" | "ERROR"``).
+        logfile: Optional path; when given, the complete run (down to ``file_level``)
+            is written there.
+        file_level: Verbosity of the file handler (default ``DEBUG`` = full trace).
     """
     root = _logging.getLogger(_ROOT_NAME)
     root.setLevel(_logging.DEBUG)

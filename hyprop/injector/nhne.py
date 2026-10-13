@@ -35,6 +35,7 @@ class NHNEInjector(InjectorModel):
         self._hem = HEMInjector(discharge_coefficient, orifice_count, orifice_area_m2)
 
     def mdot(self, upstream: FluidState, p_chamber_pa: float) -> float:
+        """Oxidizer mass flow [kg/s]: Dyer blend (kappa SPI + HEM) / (1 + kappa)."""
         dp = self._dp(upstream, p_chamber_pa)
         if dp <= 0.0:
             return 0.0

@@ -7,12 +7,11 @@ Design (ARCHITECTURE.md, principle 4):
 * Conversion happens only at module boundaries (config parsing, I/O, GUI),
   using :func:`to_si`.
 
-Example
--------
->>> to_si("35 bar", "Pa")
-3500000.0
->>> to_si(0.025, "m")
-0.025
+Example:
+    >>> to_si("35 bar", "Pa")
+    3500000.0
+    >>> to_si(0.025, "m")
+    0.025
 """
 
 from __future__ import annotations
@@ -36,23 +35,16 @@ QuantityLike = Numeric | str | pint.Quantity
 def to_si(value: QuantityLike, target_unit: str) -> float:
     """Convert ``value`` to a plain float expressed in ``target_unit``.
 
-    Parameters
-    ----------
-    value:
-        Either a bare number (assumed to already be in ``target_unit``),
-        a string with units (e.g. ``"35 bar"``), or a ``pint.Quantity``.
-    target_unit:
-        SI unit the caller expects, e.g. ``"Pa"``, ``"m"``, ``"kg/m^3"``.
+    Args:
+        value: Either a bare number (assumed to already be in ``target_unit``),
+            a string with units (e.g. ``"35 bar"``), or a ``pint.Quantity``.
+        target_unit: SI unit the caller expects, e.g. ``"Pa"``, ``"m"``, ``"kg/m^3"``.
 
-    Returns
-    -------
-    float
-        Magnitude of ``value`` expressed in ``target_unit``.
+    Returns:
+        float: Magnitude of ``value`` expressed in ``target_unit``.
 
-    Raises
-    ------
-    UnitError
-        If the string cannot be parsed or dimensions are incompatible.
+    Raises:
+        UnitError: If the string cannot be parsed or dimensions are incompatible.
     """
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return float(value)

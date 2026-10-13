@@ -42,6 +42,7 @@ class TankState:
 
     @property
     def mass_total_kg(self) -> float:
+        """Liquid + vapour mass [kg]."""
         return self.mass_liquid_kg + self.mass_vapor_kg
 
     @property
@@ -51,6 +52,7 @@ class TankState:
 
     @property
     def empty(self) -> bool:
+        """True when no oxidizer is left."""
         return self.mass_total_kg <= 0.0
 
 

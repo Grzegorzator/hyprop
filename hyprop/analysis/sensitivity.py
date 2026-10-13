@@ -41,18 +41,17 @@ def oat_sensitivity(
 ) -> pd.DataFrame:
     """Central-difference relative sensitivities.
 
-    Parameters
-    ----------
-    parameters:
-        ``{config_path: nominal_value}`` - nominal must be explicit so
-        that database-supplied values (e.g. regression a, n) are pinned.
-    delta:
-        Relative perturbation (default +-5%).
+    Args:
+        config: Baseline engine.
+        parameters: ``{config_path: nominal_value}`` - nominal must be
+            explicit so that database-supplied values (e.g. regression a, n)
+            are pinned.
+        outputs: Result columns to differentiate.
+        delta: Relative perturbation (default +-5%).
 
-    Returns
-    -------
-    DataFrame indexed by parameter path, columns = outputs, values =
-    relative sensitivity S (1% change of X -> S% change of Y).
+    Returns:
+        DataFrame indexed by parameter path, columns = outputs, values =
+        relative sensitivity S (1% change of X -> S% change of Y).
     """
     base = run_case(config, dict(parameters))
     rows = {}

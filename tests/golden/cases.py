@@ -92,6 +92,12 @@ def case_prusak_v2() -> dict[str, Any]:
     return _transient_record(EngineConfig.from_dict(bench.CFG))
 
 
+def _req(x: float | None) -> float:
+    """Sized configs always define these fields."""
+    assert x is not None
+    return float(x)
+
+
 def case_size_3km() -> dict[str, Any]:
     import hyprop.api as api
     import hyprop.simulation.solver as sm
@@ -119,10 +125,10 @@ def case_size_3km() -> dict[str, Any]:
             grain_length_m=float(c.grain.length_m),
             grain_outer_diameter_m=float(c.grain.outer_diameter_m),
             port_initial_diameter_m=float(c.grain.port["initial_diameter_m"]),
-            tank_volume_m3=float(c.tank.volume_m3),
-            oxidizer_mass_kg=float(c.tank.oxidizer_mass_kg),
+            tank_volume_m3=_req(c.tank.volume_m3),
+            oxidizer_mass_kg=_req(c.tank.oxidizer_mass_kg),
             orifice_count=float(c.injector.orifice_count),
-            orifice_diameter_m=float(c.injector.orifice_diameter_m),
+            orifice_diameter_m=_req(c.injector.orifice_diameter_m),
             throat_diameter_m=float(nz.throat_diameter_m),
             expansion_ratio=float(nz.expansion_ratio),
             cf_design=float(nz.cf_design),

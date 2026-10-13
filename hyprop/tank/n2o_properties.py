@@ -141,24 +141,29 @@ class CoolPropN2O:
         self._cp = CP
 
     def psat(self, temperature_k: float) -> float:
+        """Saturation pressure [Pa]."""
         _check_range(temperature_k)
         return self._cp.PropsSI("P", "T", temperature_k, "Q", 0, self._FLUID)
 
     def rho_liquid(self, temperature_k: float) -> float:
+        """Saturated liquid density [kg/m^3]."""
         _check_range(temperature_k)
         return self._cp.PropsSI("D", "T", temperature_k, "Q", 0, self._FLUID)
 
     def rho_vapor(self, temperature_k: float) -> float:
+        """Saturated vapour density [kg/m^3]."""
         _check_range(temperature_k)
         return self._cp.PropsSI("D", "T", temperature_k, "Q", 1, self._FLUID)
 
     def h_vap(self, temperature_k: float) -> float:
+        """Latent heat of vaporisation [J/kg]."""
         _check_range(temperature_k)
         h_v = self._cp.PropsSI("H", "T", temperature_k, "Q", 1, self._FLUID)
         h_l = self._cp.PropsSI("H", "T", temperature_k, "Q", 0, self._FLUID)
         return h_v - h_l
 
     def cp_liquid(self, temperature_k: float) -> float:
+        """Saturated liquid isobaric heat capacity [J/(kg*K)]."""
         _check_range(temperature_k)
         return self._cp.PropsSI("C", "T", temperature_k, "Q", 0, self._FLUID)
 

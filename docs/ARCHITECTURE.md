@@ -243,7 +243,9 @@ Tryby pracy:
 ```python
 # api.py — publiczne API (GUI i CLI to tylko klienci)
 def run(config: EngineConfig) -> SimulationResult: ...
-def run_batch(cases: CaseMatrix, n_jobs: int = -1) -> pd.DataFrame: ...
+def run_batch(
+    config: EngineConfig, cases: Iterable[Case], progress: bool = True
+) -> pd.DataFrame: ...  # v0.2: sekwencyjnie
 def size(mission: MissionRequirements) -> EngineConfig: ...
 
 

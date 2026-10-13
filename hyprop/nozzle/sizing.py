@@ -46,7 +46,19 @@ DESIGN_ALTITUDE_FRACTION = 1.0 / 3.0
 
 @dataclass(frozen=True)
 class NozzleDesign:
-    """Result of nozzle sizing."""
+    """Result of nozzle sizing.
+
+    Attributes:
+        throat_diameter_m: Throat diameter [m].
+        exit_diameter_m: Exit diameter [m].
+        expansion_ratio: Area ratio A_e/A_t [-].
+        design_altitude_m: Altitude where p_e = p_a [m].
+        design_ambient_pa: Ambient pressure at that altitude [Pa].
+        exit_pressure_pa: Exit pressure at the design Pc [Pa].
+        cf_design: Thrust coefficient at the design altitude (with divergence) [-].
+        cf_sea_level: Thrust coefficient at lift-off [-].
+        separation_risk: True if p_e < 0.4 p_a at sea level (Summerfield).
+    """
 
     throat_diameter_m: float
     exit_diameter_m: float
@@ -75,27 +87,30 @@ def size_nozzle(
 ) -> NozzleDesign:
     """Size throat and expansion for a target thrust at the ROP point.
 
-    Parameters
-    ----------
-    point:
-        ROP operating point providing ``pc`` [Pa], ``of`` [-] and
-        ``gamma`` [-] (frozen cp/cv; impulse-weighted point recommended).
-    thrust_target_n:
-        Thrust to deliver at the design point [N].
-    design_altitude_m:
-        Altitude of pressure adaptation (pe = pa there) [m].
-    efficiency, discharge_coefficient:
-        Same meaning as ``nozzle.efficiency`` / ``nozzle.discharge_coefficient``
-        in the transient, so that the sized throat delivers the target
-        thrust at the design Pc: F = eta*Cd*Cf_i,lambda*Pc*At (the c*
-        efficiency cancels at fixed Pc, Sutton 9th ed. Eqs. 3-31, 3-40).
-    cea:
-        Thermochemistry backend. When given (and ``point`` has ``of``),
-        eps and Cf_i come from the shifting-equilibrium expansion itself
-        (eps such that CEA p_e = p_a). Otherwise the ideal-gas relations
-        with constant frozen gamma are used, which misplace eps_opt by
-        ~3 % (frozen gamma) to ~10 % (equilibrium gamma) for hybrid
-        exhaust at 35 bar (docs/VALIDATION.md).
+    ``efficiency`` and ``discharge_coefficient`` have the same meaning as
+    ``nozzle.efficiency`` / ``nozzle.discharge_coefficient`` in the
+    transient, so the sized throat delivers the target thrust at the
+    design Pc: F = eta*Cd*Cf_i,lambda*Pc*At (the c* efficiency cancels at
+    fixed Pc, Sutton 9th ed. Eqs. 3-31, 3-40).
+
+    Args:
+        point: ROP operating point providing ``pc`` [Pa], ``of`` [-] and
+            ``gamma`` [-] (frozen cp/cv; impulse-weighted point recommended).
+        thrust_target_n: Thrust to deliver at the design point [N].
+        design_altitude_m: Altitude of pressure adaptation (pe = pa there) [m].
+        half_angle_deg: Conical divergence half angle [deg].
+        efficiency: Nozzle efficiency other than divergence [-].
+        discharge_coefficient: Throat discharge coefficient Cd [-].
+        cea: Thermochemistry backend. When given (and ``point`` has
+            ``of``), eps and Cf_i come from the shifting-equilibrium
+            expansion itself (eps such that CEA p_e = p_a). Otherwise the
+            ideal-gas relations with constant frozen gamma are used, which
+            misplace eps_opt by ~3 % (frozen gamma) to ~10 % (equilibrium
+            gamma) for hybrid exhaust at 35 bar (docs/VALIDATION.md).
+
+    Returns:
+        Throat and exit diameters, eps, Cf at the design altitude and at
+        sea level, and the Summerfield separation flag.
     """
     pc = point["pc"]
     pa_design = atmosphere.pressure(design_altitude_m)

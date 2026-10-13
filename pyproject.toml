@@ -66,7 +66,18 @@ extend-exclude = ["outputs"]
 
 [tool.ruff.lint]
 # Explicit rule set: ruff's default selection changes between versions.
-select = ["E", "F", "W", "I", "UP", "B"]
+select = ["E", "F", "W", "I", "UP", "B", "D"]
+# D105/D107: magic methods and __init__ are documented on the class.
+ignore = ["D105", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Docstring rules apply to the library; scripts and tests are exempt.
+"tests/**" = ["D"]
+"validation/**" = ["D"]
+"examples/**" = ["D"]
 
 [tool.mypy]
 python_version = "3.11"

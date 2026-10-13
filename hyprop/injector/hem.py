@@ -40,6 +40,7 @@ class HEMInjector(InjectorModel):
         self._props = CoolPropN2O()  # raises if CoolProp missing
 
     def mdot(self, upstream: FluidState, p_chamber_pa: float) -> float:
+        """Oxidizer mass flow [kg/s], homogeneous equilibrium model (CoolProp)."""
         if self._dp(upstream, p_chamber_pa) <= 0.0:
             return 0.0
         h1, s1 = self._upstream_hs(upstream)

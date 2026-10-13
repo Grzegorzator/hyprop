@@ -115,14 +115,14 @@ class ThermochemistryBackend(ABC):
     def query(self, of: float, pc: float, eps: float) -> CEAResult:
         """Compute combustion and expansion properties.
 
-        Parameters
-        ----------
-        of:
-            Oxidizer-to-fuel mass ratio [-].
-        pc:
-            Chamber (stagnation) pressure [Pa].
-        eps:
-            Nozzle expansion area ratio Ae/At [-].
+        Args:
+            of: Oxidizer-to-fuel mass ratio [-].
+            pc: Chamber (stagnation) pressure [Pa].
+            eps: Nozzle expansion area ratio Ae/At [-].
+
+        Returns:
+            Chamber state, ideal c*, and the exit expansion under shifting
+            equilibrium and frozen-at-chamber chemistry.
         """
 
 
@@ -130,7 +130,17 @@ def get_backend(name: str = "auto", **kwargs) -> ThermochemistryBackend:
     """Instantiate a thermochemistry backend.
 
     ``"auto"`` tries RocketCEA first (native NASA CEA results), then
-    Cantera. Explicit names: ``"rocketcea"``, ``"cantera"``.
+    Cantera. The Cantera backend (GRI-Mech 3.0) has no condensed carbon and
+    is accurate only for atomic C/O < 1 (docs/VALIDATION.md).
+
+    Args:
+        name: ``"auto"``, ``"rocketcea"`` or ``"cantera"``.
+        **kwargs: Backend arguments, typically ``fuel`` and ``oxidizer``
+            database keys.
+
+    Returns:
+        A backend whose :meth:`ThermochemistryBackend.query` answers
+        (O/F, Pc, eps) points.
     """
     from hyprop.core.registry import autodiscover, get_model
 

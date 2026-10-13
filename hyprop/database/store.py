@@ -82,6 +82,11 @@ def save_record(
 
 
 def load_record(category: str, name: str, root: str | Path | None = None) -> dict:
+    """Load one database record (YAML) as a dict.
+
+    Raises:
+        DataError: If the record does not exist.
+    """
     path = _category_dir(category, root) / f"{name}.yaml"
     if not path.exists():
         raise DataError(f"No record '{category}/{name}'.")
@@ -89,4 +94,5 @@ def load_record(category: str, name: str, root: str | Path | None = None) -> dic
 
 
 def list_records(category: str, root: str | Path | None = None) -> list[str]:
+    """Names of all records in ``category``, sorted."""
     return sorted(p.stem for p in _category_dir(category, root).glob("*.yaml"))

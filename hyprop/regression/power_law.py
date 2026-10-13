@@ -40,6 +40,7 @@ class PowerLawRegression(RegressionModel):
         self.flux_basis = self.validate_flux_basis(flux_basis)
 
     def rdot(self, g_flux: float, grain_length_m: float) -> float:
+        """Regression rate a * G^n * L^m [m/s] (SI coefficients)."""
         if g_flux < 0.0:
             raise ValueError("Mass flux must be non-negative.")
         if g_flux == 0.0:

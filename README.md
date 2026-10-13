@@ -19,16 +19,32 @@ experimentally before design use.
 
 ## Install
 
+Python >= 3.11, managed with [uv](https://docs.astral.sh/uv/) (`uv.lock`
+pins the tested versions; CI runs Python 3.11 and 3.12):
+
 ```bash
 git clone https://github.com/Grzegorzator/hyprop.git
 cd hyprop
-pip install -e .[dev,cantera,props,export]
-pytest
+uv sync --extra cantera --extra props --extra export --extra opt
+uv run pytest
 ```
 
-Optional: `pip install rocketcea` (NASA CEA; needs a Fortran compiler),
-`pip install cea` (NASA's CEA package, used by `validation/`) and
-`pip install -e .[opt]` (pymoo NSGA-II, SALib Morris/Sobol).
+`uv sync` installs the `dev` dependency group (pytest, hypothesis, ruff,
+mypy). Extras: `cantera`, `props` (CoolProp), `export` (openpyxl, jinja2),
+`opt` (pymoo NSGA-II, SALib), `cea` (RocketCEA; needs a Fortran compiler),
+`validation` (NASA's `cea` package, used by `validation/`).
+Without uv: `pip install -e ".[cantera,props,export]" pytest hypothesis`.
+
+## Development
+
+```bash
+uv run ruff check . && uv run ruff format --check .
+uv run mypy hyprop validation tests examples
+uv run pytest            # incl. golden tests; -m "not slow" skips them
+```
+
+All three run in GitHub Actions on every push and pull request. Public
+API docstrings follow the Google style (enforced by ruff `D` for `hyprop/`).
 
 ## Physical conventions (v0.2)
 
@@ -60,7 +76,8 @@ Optional: `pip install rocketcea` (NASA CEA; needs a Fortran compiler),
 
 ## Validation (summary; full table in docs/VALIDATION.md)
 
-Reproduced with `python -m validation.run_all`.
+Reproduced with `uv run --extra validation python -m validation.run_all`
+(optional data paths: `validation/README.md`).
 
 * **HRAP v1.06 benchmark** (prusak_v2, PE/N2O, HRAP HDPE preset with
   rho 920, liquid phase): mean deviations Pc 1.4 %, tank pressure 0.5 %,
@@ -139,7 +156,7 @@ hyprop/sizing/      inverse sizing api.size
 hyprop/nozzle/      nozzle sizing and losses
 hyprop/batch/, analysis/, optimization/, export/, database/
 validation/         validation suite -> docs/VALIDATION.md
-tests/              pytest
+tests/              pytest (unit, Hypothesis invariants, golden)
 ```
 
 ## Authors

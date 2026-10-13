@@ -6,8 +6,8 @@ specific heats ``gamma`` (frozen properties between stations). Real-gas
 and shifting-equilibrium effects enter through the CEA backends, which
 provide effective ``gamma`` and molar mass per station.
 
-Sources
--------
+Sources:
+
 * Sutton, G. P., Biblarz, O., *Rocket Propulsion Elements*, 9th ed.,
   Wiley 2017, Ch. 3 (ideal rocket, nozzle theory).
 * Anderson, J. D., *Modern Compressible Flow*, 3rd ed., Ch. 3-5.
@@ -86,12 +86,10 @@ def area_ratio(mach: float, gamma: float) -> float:
 def mach_from_area_ratio(ratio: float, gamma: float, branch: str = "supersonic") -> float:
     """Invert ``A/A*`` for Mach number on the chosen branch.
 
-    Parameters
-    ----------
-    ratio:
-        Area ratio A/A* >= 1.
-    branch:
-        ``"supersonic"`` (diverging part) or ``"subsonic"`` (converging).
+    Args:
+        ratio: Area ratio A/A* >= 1.
+        gamma: Ratio of specific heats [-].
+        branch: ``"supersonic"`` (diverging part) or ``"subsonic"`` (converging).
     """
     _check_gamma(gamma)
     if ratio < 1.0:

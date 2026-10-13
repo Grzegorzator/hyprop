@@ -95,6 +95,7 @@ class RocketCEABackend(ThermochemistryBackend):
 
     # ------------------------------------------------------------- query
     def query(self, of: float, pc: float, eps: float) -> CEAResult:
+        """Query NASA CEA through RocketCEA (SI in and out)."""
         if of <= 0 or pc <= 0 or eps <= 1.0:
             raise ValueError("Require of > 0, pc > 0, eps > 1.")
         cea = self._cea

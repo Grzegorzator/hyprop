@@ -29,6 +29,7 @@ def _metrics(cfg_dict) -> dict[str, float]:
     res = api.run(EngineConfig.from_dict(cfg_dict))
     h = res.history
     lro = res.event_time("liquid_runout")
+    assert lro is not None, "case must reach liquid run-out"
     liq = h["t"] <= lro
     return dict(It=res.summary["total_impulse_ns"], LRO=lro, Pc_liq=float(np.mean(h["pc"][liq])))
 

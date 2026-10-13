@@ -39,13 +39,16 @@ class CylindricalGrain(GrainGeometry):
         return 0.5 * self.initial_diameter_m + max(w, 0.0)
 
     def port_area(self, w: float) -> float:
+        """Total port cross-section area [m^2] after web burn ``w`` [m]."""
         radius = min(self._radius(w), 0.5 * self.outer_diameter_m)
         return math.pi * radius * radius
 
     def burn_perimeter(self, w: float) -> float:
+        """Burning perimeter [m] after web burn ``w`` [m]."""
         if self.is_burned_out(w):
             return 0.0
         return 2.0 * math.pi * self._radius(w)
 
     def web_remaining(self, w: float) -> float:
+        """Remaining web thickness [m] after web burn ``w`` [m]."""
         return 0.5 * self.outer_diameter_m - self._radius(w)
