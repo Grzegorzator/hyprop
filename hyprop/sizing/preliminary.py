@@ -39,6 +39,8 @@ from hyprop.nozzle.sizing import (
 )
 from hyprop.oppoints import analyze
 from hyprop.physics import atmosphere
+from hyprop.physics.compressible import optimum_expansion_ratio
+from hyprop.sizing.mixture import optimal_of
 from hyprop.tank.n2o_properties import ESDU91022
 
 _log = get_logger(__name__)
@@ -48,6 +50,9 @@ PC_DESIGN_DEFAULT = 32e5  # [Pa] target liquid-phase chamber pressure
 G_OX0_MAX = 450.0  # [kg/m^2/s] initial oxidizer flux limit
 DP_OVER_PC = 0.30  # injector pressure-drop ratio at design
 ISP_ESTIMATE_S = 210.0  # first-guess delivered Isp
+#: gamma for the ideal-gas eps estimate used only to locate the optimum O/F
+GAMMA_EPS_ESTIMATE = 1.22
+OF_BELOW_OPTIMUM = 0.85  # first guess: O/F falls during a blowdown burn
 WEB_MARGIN = 1.25  # OD sized for 25% web reserve
 FILL_FRACTION = 0.85  # tank liquid volume fill at loading
 
@@ -58,8 +63,8 @@ class SizingOptions:
 
     Attributes:
         pc_design_pa: Design chamber pressure [Pa].
-        of_design: First-guess design O/F; None uses 0.85 x 8.2 = 6.97
-            (8.2 is a hard-coded optimum O/F, not looked up per propellant).
+        of_design: First-guess design O/F; None uses 0.85 x the Isp-optimal
+            O/F of the propellant pair (:func:`hyprop.sizing.mixture.optimal_of`).
         g_ox0: Initial port oxidizer flux [kg/(m^2*s)].
         injector_cd: Injector orifice discharge coefficient [-].
         orifice_diameter_m: Injector orifice diameter [m].
@@ -77,7 +82,7 @@ class SizingOptions:
     """
 
     pc_design_pa: float = PC_DESIGN_DEFAULT
-    of_design: float | None = None  # None -> near optimum - 15%
+    of_design: float | None = None  # None -> 0.85 x Isp-optimal O/F
     g_ox0: float = 400.0  # initial port flux [kg/m^2/s]
     injector_cd: float = 0.60
     orifice_diameter_m: float = 1.5e-3
@@ -155,9 +160,26 @@ def size_engine(
         else design_altitude_from_apogee(apogee_m)
     )
 
+    from hyprop.cea import get_backend
+    from hyprop.oppoints.design_points import OperatingPoint
+
+    thermo = None
+    if opts.nozzle_from_cea or opts.of_design is None:
+        thermo = get_backend(opts.cea_backend, fuel=fuel, oxidizer=oxidizer)
+
     # ---------------- analytic first guess ------------------------------
     mdot_total = thrust_n / (ISP_ESTIMATE_S * G0)
-    of_design = opts.of_design or 0.85 * 8.2  # sub-optimum: O/F drifts
+    if opts.of_design is not None:
+        of_design = opts.of_design
+    else:
+        assert thermo is not None
+        pa_design = atmosphere.pressure(h_design)
+        eps_estimate = optimum_expansion_ratio(opts.pc_design_pa / pa_design, GAMMA_EPS_ESTIMATE)
+        of_opt = optimal_of(thermo, opts.pc_design_pa, eps_estimate, pa_design)
+        of_design = OF_BELOW_OPTIMUM * of_opt
+        _log.info(
+            "Isp-optimal O/F = %.2f (eps %.2f); first guess %.2f", of_opt, eps_estimate, of_design
+        )
     mdot_ox = mdot_total * of_design / (1.0 + of_design)
     mdot_fuel = mdot_total - mdot_ox
     burn_time = total_impulse_ns / thrust_n
@@ -184,14 +206,7 @@ def size_engine(
     )
 
     # placeholder ROP-like point for the very first nozzle sizing
-    from hyprop.cea import get_backend
-    from hyprop.oppoints.design_points import OperatingPoint
-
-    cea = (
-        get_backend(opts.cea_backend, fuel=fuel, oxidizer=oxidizer)
-        if opts.nozzle_from_cea
-        else None
-    )
+    cea = thermo if opts.nozzle_from_cea else None
     nozzle_kw: dict[str, Any] = dict(
         efficiency=opts.nozzle_efficiency, discharge_coefficient=opts.nozzle_cd, cea=cea
     )
