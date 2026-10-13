@@ -22,6 +22,15 @@ A missing file turns its rows into `TODO: brak referencji` (never PASS).
 Files:
 
 * `common.py` – `Row` (one report line), PASS/FAIL/TODO logic, Markdown writer.
-* `readme_claims.py` – stage 1, item 1: reproduction of every number in README.md.
-* `NOTES_stage1.md` – hand-written findings appended to the report.
+* `readme_claims.py` – item 1: reproduction of every number in README.md.
+* `thermo_grid.py` – item 2: PE/N2O thermochemistry grid vs NASA CEA
+  (full grid in `docs/validation_data/thermo_grid_pe_n2o.csv`).
+* `nozzle.py` – item 3: ideal nozzle relations vs Sutton & Biblarz examples.
+* `n2o.py` – item 4: ESDU 91022 vs EOS (and NIST, if `data/nist_n2o_sat.csv` exists).
+* `feed.py` – item 5: injector models vs Waxman et al.; tank property sensitivity.
+* `regression_lit.py` – item 6: regression law vs literature.
+* `convergence.py` – item 8: dt and Pc-tolerance convergence (Richardson).
+* `units_audit.py` – item 9: dimensional analysis with Pint.
+* item 7 (invariants) lives in `tests/test_invariants.py` (Hypothesis).
+* `SUMMARY_stage1.md`, `NOTES_stage1.md` – hand-written summary and findings.
 * `run_all.py` – entry point; also runs `pytest` and records the result.

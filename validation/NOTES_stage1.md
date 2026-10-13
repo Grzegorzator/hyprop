@@ -14,7 +14,7 @@
 | B3 | `StationState.gamma` = cp/cv (Cantera), ale γ_s (RocketCEA); RocketCEA zwracał też cp równowagowe | `gamma` = zamrożone cp/cv wszędzie, nowe pole `gamma_eq` = γ_s | transient bez zmian (Cantera) |
 | B4 | η_c* nie wchodziło do ciągu (∂F/∂η_c* = −0.61) – jak w HRAP (Nickel, równ. 20–24) | `F = η_c*·η_noz·ṁ·c_i` wg Sutton & Biblarz, 9th ed., r. 3.5, równ. 3-40/3-41 | F, Isp −(1−η_c*) ≈ −5 % |
 | B5 | Dysza w sizingu: ε ze wzoru gazu idealnego (frozen γ: −3 % vs CEA), Cf bez η i Cd → pętla sizingu stała na −5 % ciągu po B4 | ε z rozprężania CEA (p_e = p_a), Cf dostarczony = λ·η·Cd·Cf_i; tolerancja sizingu 3 % → 1 % | sizing 3 km (jeszcze HDPE): 7 iteracji, F_iw 497 N, It 4040 Ns |
-| B6 | Paliwo: domyślna parafina, a ΔHf PE = −41.2 kJ/mol C2H4 to oszacowanie fazy **gazowej** | PE jako paliwo projektu: ΔHf fazy stałej −28.182 kJ/mol CH2 (Splitstone & Johnson, J. Res. NBS 78A, 611, 1974); nowy wpis `ldpe` (granulat MELprop, ρ 920); domyślne paliwo `ldpe` | O/F 6.3, 32 bar: Tc −23 K (3272 → 3249), c* −0.5 %, Isp −0.5 %; z ρ 920: sizing 3 km 8 iteracji, F_iw 498 N, It 4023 Ns |
+| B6 | Paliwo: domyślna parafina, a ΔHf PE = −41.2 kJ/mol C2H4 to oszacowanie fazy **gazowej** | PE jako paliwo projektu: ΔHf fazy stałej −28.182 kJ/mol CH2 (Splitstone & Johnson, J. Res. NBS 78A, 611, 1974); nowy wpis `ldpe` (granulat MELprop, ρ 920); domyślne paliwo `ldpe` | O/F 6.3, 32 bar: Tc −23 K (3272 → 3249), c* −0.5 %, Isp −0.5 %; z ρ 920: sizing 3 km 8 iteracji, F_iw 498 N, It 4026 Ns |
 
 Drobne: shapely `resolution` → `quad_segs`; `importorskip("openpyxl")`; ścieżka HRAP przez `HYPROP_HRAP_DIR`; przykłady piszą do `outputs/` zamiast nadpisywać śledzone pliki.
 

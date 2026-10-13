@@ -82,10 +82,10 @@ Reproduced with `python -m validation.run_all`.
 
 | Script | Result |
 |---|---|
-| `examples/sizing_pe_05kN.py` | PE (LDPE)/N2O: It = 3719 Ns, Pc_peak 36.9 bar, LRO 7.35 s, Isp 194 s |
-| `examples/rop_pe_05kN.py` | time averages understate thrust by 51 % and Pc by 47 % vs impulse-weighted; liquid phase delivers 92.4 % of It in 42.8 % of burn time |
-| `examples/size_pe_3km.py` | `api.size(500 N, 4000 Ns, 3 km)`, LDPE: 8 iterations, F_iw 498 N, It 4023 Ns, Dt 12.0 mm, eps 5.00 adapted at 1000 m |
-| `examples/trajectory_pe_3km.py` | 1-DOF, m_dry 7 kg (assumed), Cd 0.55, D 0.10 m: apogee 3753 m |
+| `examples/sizing_pe_05kN.py` | PE (LDPE)/N2O: It = 3714 Ns, Pc_peak 36.9 bar, LRO 7.35 s, Isp 194 s |
+| `examples/rop_pe_05kN.py` | time averages understate thrust by 51 % and Pc by 47 % vs impulse-weighted; liquid phase delivers 92.5 % of It in 42.8 % of burn time |
+| `examples/size_pe_3km.py` | `api.size(500 N, 4000 Ns, 3 km)`, LDPE: 8 iterations, F_iw 498 N, It 4026 Ns, Dt 12.0 mm, eps 5.00 adapted at 1000 m |
+| `examples/trajectory_pe_3km.py` | 1-DOF, m_dry 7 kg (assumed), Cd 0.55, D 0.10 m: apogee 3755 m |
 | `examples/benchmark_prusak_v2.py` | HRAP comparison (needs `HYPROP_HRAP_DIR`) |
 | `examples/sensitivity_pe.py`, `examples/report_pe_3km.py` | OAT sensitivity; CSV/XLSX/JSON export + LaTeX report |
 

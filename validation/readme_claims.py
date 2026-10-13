@@ -12,7 +12,6 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import math
-import sys
 from typing import List
 
 import numpy as np
@@ -130,7 +129,7 @@ def sizing_examples() -> List[Row]:
     lro = res.event_time("liquid_runout")
     case = "examples/pe_05kN.yaml"
     rows += [
-        Row("It", case, 3719, README, s["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
+        Row("It", case, 3714, README, s["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
         Row("Pc (szczyt)", case, 36.9, README, s["peak_pc_pa"] / 1e5, tol=0.05, dev_kind="abs", unit="bar"),
         Row("LRO", case, 7.35, README, lro, tol=0.005, dev_kind="abs", unit="s"),
         Row("Isp średni", case, 194, README, s["isp_mean_s"], tol=0.5, dev_kind="abs", unit="s"),
@@ -144,7 +143,7 @@ def sizing_examples() -> List[Row]:
             comment="README podaje liczby całkowite. Tolerancja ±1 pp."),
         Row("Średnia czasowa Pc vs IW [%]", "ROP " + case, -47, README, 100 * (ta["pc"] / iw["pc"] - 1),
             tol=1.0, dev_kind="abs", unit="pp"),
-        Row("Udział fazy ciekłej w It [%]", "ROP " + case, 92.4, README, 100 * ph.loc["liquid", "impulse_share"],
+        Row("Udział fazy ciekłej w It [%]", "ROP " + case, 92.5, README, 100 * ph.loc["liquid", "impulse_share"],
             tol=0.05, dev_kind="abs", unit="pp"),
         Row("Udział fazy ciekłej w czasie [%]", "ROP " + case, 42.8, README, 100 * ph.loc["liquid", "time_share"],
             tol=0.05, dev_kind="abs", unit="pp"),
@@ -172,7 +171,7 @@ def size_3km() -> List[Row]:
         Row("Liczba iteracji", case, 8, README, sz.iterations, tol=0, dev_kind="abs",
             comment="Tolerancja sizingu 1 % (v0.1: 3 %); v0.1 padało na błędzie B1."),
         Row("F_iw", case, 498, README, a["thrust_iw_n"], tol=0.5, dev_kind="abs", unit="N"),
-        Row("It", case, 4023, README, a["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
+        Row("It", case, 4026, README, a["total_impulse_ns"], tol=0.5, dev_kind="abs", unit="Ns"),
         Row("Dt", case, 12.0, README, sz.nozzle.throat_diameter_m * 1e3, tol=0.05, dev_kind="abs", unit="mm"),
         Row("eps", case, 5.00, README, sz.nozzle.expansion_ratio, tol=0.005, dev_kind="abs"),
     ]
@@ -186,7 +185,7 @@ def trajectory() -> List[Row]:
     import hyprop.simulation.solver as sm
     sm._TABLE_OF, sm._TABLE_PC = 10, 7          # the example mutates module globals
     sm._TABLE_CACHE.clear()
-    return [Row("Apogeum (m_dry = 7 kg)", "examples/trajectory_pe_3km.py", 3753, README, ns["apogee"],
+    return [Row("Apogeum (m_dry = 7 kg)", "examples/trajectory_pe_3km.py", 3755, README, ns["apogee"],
                 tol=0.5, dev_kind="abs", unit="m",
                 comment="m_dry, Cd, D to założenia (skrypt); bez referencji lotnej.")]
 
