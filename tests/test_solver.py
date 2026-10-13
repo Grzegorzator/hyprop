@@ -107,3 +107,37 @@ def test_cea_table_cache_keys_on_exact_eps():
         b.query(6.0, 30e5, 5.0167)          # must not raise
     finally:
         sm._TABLE_OF, sm._TABLE_PC = old
+
+
+def test_cea_backend_setting_is_honoured(monkeypatch):
+    """B2: simulation.cea_backend selects the table backend (was ignored)."""
+    import hyprop.simulation.solver as sm
+    from hyprop.cea.backend import ThermochemistryBackend
+    from hyprop.core.config import EngineConfig
+
+    seen = []
+
+    def fake_get_backend(name, **kwargs):
+        seen.append(name)
+
+        class _B(ThermochemistryBackend):
+            name = "fake"
+
+            def query(self, of, pc, eps):
+                return _StubCEA().query(of, pc, eps)
+        return _B()
+
+    import hyprop.cea as cea_pkg
+    monkeypatch.setattr(cea_pkg, "get_backend", fake_get_backend)
+    sm._TABLE_CACHE.clear()
+    cfg = EngineConfig.from_dict(dict(
+        mission=dict(thrust_n=500.0, burn_time_s=8.0),
+        oxidizer=dict(name="n2o"), fuel=dict(name="hdpe"),
+        grain=dict(geometry="cylindrical", length_m=0.3, outer_diameter_m=0.06,
+                   port=dict(initial_diameter_m=0.02)),
+        simulation=dict(cea_backend="rocketcea"),
+    ))
+    table = sm._build_cea_table(cfg, 5.0)
+    sm._TABLE_CACHE.clear()
+    assert seen == ["rocketcea"]
+    assert table.name == "tabulated[fake]"

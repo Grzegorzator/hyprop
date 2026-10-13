@@ -50,6 +50,8 @@ class TabulatedBackend(ThermochemistryBackend):
         eps: float,
     ) -> None:
         self._eps = eps
+        #: e.g. "tabulated[cantera]" - records the backend behind the table
+        self.name = f"tabulated[{backend.name}]"
         of_grid = np.asarray(of_grid, dtype=float)
         pc_grid = np.asarray(pc_grid, dtype=float)
         tables = {name: np.empty((of_grid.size, pc_grid.size))

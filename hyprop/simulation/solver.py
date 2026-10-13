@@ -35,7 +35,6 @@ from typing import Dict, List, Optional, Tuple
 from scipy.optimize import brentq
 
 from hyprop.cea.backend import ThermochemistryBackend
-from hyprop.cea.cantera_backend import CanteraBackend
 from hyprop.cea.table import TabulatedBackend
 from hyprop.core.config import EngineConfig
 from hyprop.core.constants import G0, P_ATM_SL
@@ -65,6 +64,7 @@ class SimulationResult:
     history: TimeHistory
     events: List[Tuple[float, str]] = field(default_factory=list)
     summary: Dict[str, float] = field(default_factory=dict)
+    thermo_backend: str = ""        #: e.g. "tabulated[rocketcea]"
 
     def event_time(self, name: str) -> Optional[float]:
         for time_s, event in self.events:
@@ -125,29 +125,36 @@ def _build_components(config: EngineConfig):
     return fuel, fuel_density, geometry, regression, tank, injector
 
 
-#: Process-wide table cache: (fuel, oxidizer, eps, n_of, n_pc) -> table.
+#: Process-wide table cache: (backend, fuel, oxidizer, eps, n_of, n_pc) -> table.
 #: eps is keyed at full precision: TabulatedBackend.query rejects any eps
 #: mismatch > 1e-9, so a rounded key (formerly round(eps, 2)) made two
 #: sizing iterations with eps 5.0209 / 5.0167 collide and crash api.size.
 #: Batch/sensitivity runs mutate injector/tank/grain parameters far more
 #: often than propellants or eps; rebuilding the ~20 s Cantera sweep for
 #: every case would dominate runtime.
-_TABLE_CACHE: Dict[Tuple[str, str, float, int, int], TabulatedBackend] = {}
+_TABLE_CACHE: Dict[Tuple[str, str, str, float, int, int], TabulatedBackend] = {}
 
 
 def _build_cea_table(config: EngineConfig, eps: float) -> TabulatedBackend:
-    """Sweep the Cantera backend over an (O/F, Pc) grid (HRAP pattern)."""
-    import numpy as np
+    """Sweep the configured backend over an (O/F, Pc) grid (HRAP pattern).
 
-    key = (config.fuel.name, config.oxidizer.name, float(eps),
+    ``simulation.cea_backend`` selects the backend ('auto' = RocketCEA if
+    installed, else Cantera; see :func:`hyprop.cea.get_backend`).
+    """
+    import numpy as np
+    from hyprop.cea import get_backend
+
+    requested = config.simulation.cea_backend
+    key = (requested, config.fuel.name, config.oxidizer.name, float(eps),
            _TABLE_OF, _TABLE_PC)
     cached = _TABLE_CACHE.get(key)
     if cached is not None:
         return cached
 
-    backend: ThermochemistryBackend = CanteraBackend(
-        fuel=config.fuel.name, oxidizer=config.oxidizer.name
+    backend: ThermochemistryBackend = get_backend(
+        requested, fuel=config.fuel.name, oxidizer=config.oxidizer.name
     )
+    _log.info("CEA table backend: %s (requested '%s')", backend.name, requested)
     # O/F below ~2 (very fuel-rich C/H) destabilises gri30 equilibrium
     # (missing condensed carbon); the transient never goes there anyway.
     of_grid = np.linspace(2.0, 14.0, _TABLE_OF)
@@ -326,7 +333,8 @@ def run_simulation(config: EngineConfig) -> SimulationResult:
     else:
         events.append((time_s, "time_budget"))
 
-    result = SimulationResult(history=history, events=events)
+    result = SimulationResult(history=history, events=events,
+                              thermo_backend=getattr(cea, "name", type(cea).__name__))
     if len(history):
         thrust = history["thrust"]
         mdot = history["mdot_total"]
