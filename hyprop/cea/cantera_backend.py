@@ -179,7 +179,6 @@ class CanteraBackend(ThermochemistryBackend):
             {_FUEL_SPECIES_NAME: 1.0 / (1.0 + of),
              self._ox_species: of / (1.0 + of)},
         )
-        self._check_condensed_carbon(of)
         gas.equilibrate("HP")
         chamber = self._station(gas, equilibrium=True)
         h_c = gas.enthalpy_mass
@@ -213,25 +212,6 @@ class CanteraBackend(ThermochemistryBackend):
         )
 
     # ----------------------------------------------------------- helpers
-    def _check_condensed_carbon(self, of: float) -> None:
-        """Warn (once per backend) when elemental C/O > 1.
-
-        GRI-Mech 3.0 has no condensed phase, while the true equilibrium of
-        a C/H/O/N mixture with C/O > 1 contains solid carbon (NASA CEA
-        gives C(gr)). For PE/N2O this is O/F < ~3.3; vs NASA CEA, Tc is
-        then off by up to ~1.4 % and c* by ~0.6 % at O/F 3
-        (docs/VALIDATION.md, item 2). Use RocketCEA for such points.
-        """
-        gas = self._gas
-        c_to_o = gas.elemental_mole_fraction("C") / max(
-            gas.elemental_mole_fraction("O"), 1e-30)
-        if c_to_o > 1.0 and not getattr(self, "_warned_carbon", False):
-            self._warned_carbon = True
-            _log.warning(
-                "Cantera backend: C/O = %.2f > 1 at O/F = %.2f - equilibrium "
-                "should contain condensed carbon, which gri30 lacks; results "
-                "are biased (use RocketCEA for fuel-rich points).", c_to_o, of)
-
     def _station(self, gas, equilibrium: bool = False) -> StationState:
         return StationState(
             temperature_k=gas.T,
